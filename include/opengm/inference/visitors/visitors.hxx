@@ -181,11 +181,12 @@ public:
          protocolMap_["mem"].push_back(sys::MemoryInfo::usedPhysicalMemMax()/1000.0);
      
       // print step
-      if(verbose_) 
+      if(verbose_){
          if( memLogging_>0)
             std::cout<<"begin: value "<<val<<" bound "<<bound<<" mem "<< protocolMap_["mem"].back() << " MB\n";  
          else
             std::cout<<"begin: value "<<val<<" bound "<<bound<<"\n";
+      }
       // increment iteration
       ++iteration_;
       // restart timer
@@ -403,11 +404,12 @@ public:
          protocolMap_["mem"].push_back(sys::MemoryInfo::usedPhysicalMemMax()/1000.0);
 
       // print step
-      if(verbose_) 
+      if(verbose_){
          if( memLogging_>0)
             std::cout<<"begin: value "<<value<<" bound "<<bound<<" mem "<< protocolMap_["mem"].back() << " MB\n";  
          else
             std::cout<<"begin: value "<<value<<" bound "<<bound<<"\n";
+      }
       // increment iteration
       ++iteration_;
       // restart timer
@@ -534,6 +536,48 @@ private:
    double gapLimit_;
    double totalTime_;
 };
+
+template<class VISITOR, class INFERENCE_TYPE>
+class ExplicitVisitorWrapper
+{
+public:
+	typedef VISITOR VisitorType;
+	typedef INFERENCE_TYPE InferenceType;
+	typedef typename InferenceType::ValueType ValueType;
+
+	ExplicitVisitorWrapper(VISITOR* pvisitor,INFERENCE_TYPE* pinference)
+	:_pvisitor(pvisitor),
+	 _pinference(pinference){};
+	void begin(ValueType value,ValueType bound){_pvisitor->begin(*_pinference,value,bound);}
+	void end(ValueType value,ValueType bound){_pvisitor->end(*_pinference,value,bound);}
+	size_t operator() (ValueType value,ValueType bound){return (*_pvisitor)(*_pinference,value,bound);}
+	size_t operator() (){return (*_pvisitor)(*_pinference);}
+private:
+	VISITOR* _pvisitor;
+	INFERENCE_TYPE* _pinference;
+};
+
+template<class VISITOR, class INFERENCE_TYPE>
+class VisitorWrapper
+{
+public:
+	typedef VISITOR VisitorType;
+	typedef INFERENCE_TYPE InferenceType;
+	typedef typename InferenceType::ValueType ValueType;
+
+	VisitorWrapper(VISITOR* pvisitor,INFERENCE_TYPE* pinference)
+	:_pvisitor(pvisitor),
+	 _pinference(pinference){};
+	void begin(){_pvisitor->begin(*_pinference);}
+	void end(){_pvisitor->end(*_pinference);}
+	size_t operator() (){return (*_pvisitor)(*_pinference);}
+	void addLog(const std::string& logName){_pvisitor->addLog(logName);}
+	void log(const std::string& logName, double value){_pvisitor->log(logName,value);}
+private:
+	VISITOR* _pvisitor;
+	INFERENCE_TYPE* _pinference;
+};
+
 
 }
 }

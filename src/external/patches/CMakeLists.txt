@@ -91,4 +91,4 @@ add_custom_command(TARGET externalLibs PRE_BUILD
                    COMMAND ./patchsospd.sh
                    COMMENT "SOSPD"
                    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/SOSPD"
-) 
+)
