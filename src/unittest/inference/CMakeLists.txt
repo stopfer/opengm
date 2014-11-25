@@ -251,6 +251,18 @@ if(WITH_MPLP)
    add_test(test-mplp-external ${CMAKE_CURRENT_BINARY_DIR}/test-mplp-external)
 endif() 
 
+if(WITH_SRMP)
+   add_executable(test-srmp-external test_srmp_external.cxx ${headers})
+   target_link_libraries(test-srmp-external external-library-srmp)
+   add_test(test-srmp-external ${CMAKE_CURRENT_BINARY_DIR}/test-srmp-external)
+endif() 
+
+if(WITH_SOSPD)
+   add_executable(test-sospd-external test_sospd_external.cxx ${headers})
+   target_link_libraries(test-sospd-external external-library-sospd)
+   add_test(test-sospd-external ${CMAKE_CURRENT_BINARY_DIR}/test-sospd-external)
+endif() 
+
 if(WITH_MAXFLOW)
   add_executable(test-lsatr test_lsatr.cxx ${headers})
   target_link_libraries(test-lsatr external-library-maxflow)

@@ -82,6 +82,7 @@ OPTION(WITH_MAXFLOW_IBFS "Include wrapper for MAXFLOW-IBFScode" OFF)
 OPTION(WITH_LIBDAI "Include wrapper for LIBDAI code" OFF)
 OPTION(WITH_DAOOPT "Include wrapper for DAOOPT code" OFF)
 OPTION(WITH_MPLP "Include wrapper for MPLP code" OFF)
+OPTION(WITH_SRMP "Include wrapper for SRMP code" OFF)
 OPTION(WITH_OPENMP "Include OpenMP" OFF)
 OPTION(WITH_VIGRA "Include VIGRA" OFF)
 OPTION(WITH_CONICBUNDLE "Include ConicBundleLibrary" OFF)
@@ -89,8 +90,19 @@ OPTION(WITH_MATLAB "Activate MatLab-Code" OFF)
 OPTION(BUILD_CONVERTER "Build several converters" OFF)
 OPTION(BUILD_PYTHON_WRAPPER "Build python wrapper" OFF)
 OPTION(BUILD_MATLAB_WRAPPER "Build matlab wrapper" OFF)
-###Grante needs C++11. Since we have not tested OpenGM under this standard yet, using Grante is realy experimental!!!
+
+###Grante and SOSPD need C++11. Since we have not tested OpenGM under this standard yet, using Grante or SOSPD is realy experimental!!!
 ###OPTION(WITH_GRANTE "Include wrapper for grante" OFF)
+OPTION(WITH_SOSPD "Include wrapper for SOSPD code" OFF)
+
+# enable C++11
+if(WITH_GRANTE OR WITH_SOSPD)
+   message(STATUS "ENABLE C++11")
+   #remove -std=c++98
+   STRING(REPLACE "-std=c++98" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+   message(STATUS ${CMAKE_CXX_FLAGS})
+endif(WITH_GRANTE OR WITH_SOSPD)
 
 #--------------------------------------------------------------
 # Cplex
@@ -467,6 +479,30 @@ if(WITH_MPLP)
 else()
    message(STATUS "build without external inference algorithm MPLP")
 endif(WITH_MPLP)
+
+#--------------------------------------------------------------
+# SRMP
+#--------------------------------------------------------------
+if(WITH_SRMP)
+   message(STATUS "build with external inference algorithm SRMP")
+   SET(SRMP_PATCHEDSRCDIR "${PROJECT_SOURCE_DIR}/src/external/SRMP-v1.01.src-patched/" CACHE STRING "SRMP patched source code directory")
+   add_definitions(-DWITH_SRMP)
+   include_directories(${SRMP_PATCHEDSRCDIR})
+else()
+   message(STATUS "build without external inference algorithm SRMP")
+endif(WITH_SRMP)
+
+#--------------------------------------------------------------
+# SOSPD
+#--------------------------------------------------------------
+if(WITH_SOSPD)
+   message(STATUS "build with external inference algorithm SOSPD")
+   SET(SOSPD_PATCHEDSRCDIR "${PROJECT_SOURCE_DIR}/src/external/SOSPD.src-patched/" CACHE STRING "SOSPD patched source code directory")
+   add_definitions(-DWITH_SOSPD)
+   include_directories(${SOSPD_PATCHEDSRCDIR}/include)
+else()
+   message(STATUS "build without external inference algorithm SOSPD")
+endif(WITH_SOSPD)
 
 #--------------------------------------------------------------
 # thread lib

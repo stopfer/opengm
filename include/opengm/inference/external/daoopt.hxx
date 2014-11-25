@@ -240,7 +240,7 @@ namespace opengm {
 
          const daoopt::Problem& problem = main_.getProblem();
          const ValueType v =  static_cast<ValueType>(-problem.getSolutionCost());
-         if(isnan(v))
+         if(std::isnan(v))
             return  std::numeric_limits<ValueType>::infinity();
          else
             return v;

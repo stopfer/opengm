@@ -79,4 +79,16 @@ add_custom_command(TARGET externalLibs PRE_BUILD
                    COMMAND ./patchmplp_ver2.sh
                    COMMENT "MPLP"
                    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/MPLP"
+)
+
+add_custom_command(TARGET externalLibs PRE_BUILD                   
+                   COMMAND ./patchsrmp-v1.01.sh
+                   COMMENT "SRMP"
+                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/SRMP"
+) 
+
+add_custom_command(TARGET externalLibs PRE_BUILD                   
+                   COMMAND ./patchsospd.sh
+                   COMMENT "SOSPD"
+                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/SOSPD"
 ) 

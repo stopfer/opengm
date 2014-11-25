@@ -41,6 +41,14 @@ public:
       high_(high) 
    {}
 
+   void setLow(const T low) {
+      low_ = low;
+   }
+
+   void setHigh(const T high) {
+      high_ = high;
+   }
+
 private:
 	T low_;
 	T high_;
@@ -53,7 +61,7 @@ template<class> friend class RandomUniform;
 
 template<class T>
 class RandomUniformInteger
-: RandomUniformBase<T>
+: public RandomUniformBase<T>
 {
 public:
 	RandomUniformInteger(const T low = 0, const T high = 1)
@@ -83,7 +91,7 @@ template<class> friend class RandomUniform;
 
 template<class T>
 class RandomUniformFloatingPoint
-:  RandomUniformBase<T>
+: public RandomUniformBase<T>
 {
 public:
 	RandomUniformFloatingPoint(const T low = 0, const T high = 1)

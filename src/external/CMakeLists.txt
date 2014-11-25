@@ -462,3 +462,64 @@ IF(WITH_MPLP)
         MESSAGE ("MPLP not installed, run make externalLibs first and configure again")
     ENDIF(DEFINED MPLP_SRC_FILES_EXIST)
 ENDIF()
+
+IF(WITH_SRMP)
+    SET(SRMP_SRC_FILES
+        ${SRMP_PATCHEDSRCDIR}/AddEdges.cpp
+        ${SRMP_PATCHEDSRCDIR}/CMP.cpp
+        ${SRMP_PATCHEDSRCDIR}/debug.cpp
+        ${SRMP_PATCHEDSRCDIR}/energy.cpp
+        ${SRMP_PATCHEDSRCDIR}/MPLP.cpp
+        ${SRMP_PATCHEDSRCDIR}/order.cpp
+        ${SRMP_PATCHEDSRCDIR}/SRMP.cpp
+        ${SRMP_PATCHEDSRCDIR}/triplets.cpp
+        ${SRMP_PATCHEDSRCDIR}/GeneralType.cpp
+        ${SRMP_PATCHEDSRCDIR}/PairwiseDualType.cpp
+        ${SRMP_PATCHEDSRCDIR}/PairwiseType.cpp
+        ${SRMP_PATCHEDSRCDIR}/PatternType.cpp
+        ${SRMP_PATCHEDSRCDIR}/PottsType.cpp
+        ${SRMP_PATCHEDSRCDIR}/SharedPairwiseType.cpp
+    )
+    SET(SRMP_SRC_FILES_EXIST 1)
+    FOREACH(f ${SRMP_SRC_FILES})
+        IF(NOT EXISTS ${f})
+            UNSET(SRMP_SRC_FILES_EXIST)
+        ENDIF(NOT EXISTS ${f})
+    ENDFOREACH(f)
+    
+    IF(DEFINED SRMP_SRC_FILES_EXIST)    
+      ADD_LIBRARY(external-library-srmp
+                  ${SRMP_SRC_FILES}
+      ) 
+      ADD_LIBRARY(external-library-srmp-shared SHARED
+                  ${SRMP_SRC_FILES}
+      )
+    ELSE(DEFINED SRMP_SRC_FILES_EXIST)
+        MESSAGE ("SRMP not installed, run make externalLibs first and configure again")
+    ENDIF(DEFINED SRMP_SRC_FILES_EXIST)
+ENDIF()
+
+IF(WITH_SOSPD)
+    SET(SOSPD_SRC_FILES
+        ${SOSPD_PATCHEDSRCDIR}/src/submodular-ibfs.cpp
+        ${SOSPD_PATCHEDSRCDIR}/src/gen-random.cpp
+        ${SOSPD_PATCHEDSRCDIR}/src/sospd.cpp
+    )
+    SET(SOSPD_SRC_FILES_EXIST 1)
+    FOREACH(f ${SOSPD_SRC_FILES})
+        IF(NOT EXISTS ${f})
+            UNSET(SOSPD_SRC_FILES_EXIST)
+        ENDIF(NOT EXISTS ${f})
+    ENDFOREACH(f)
+    
+    IF(DEFINED SOSPD_SRC_FILES_EXIST)    
+      ADD_LIBRARY(external-library-sospd
+                  ${SOSPD_SRC_FILES}
+      ) 
+      ADD_LIBRARY(external-library-sospd-shared SHARED
+                  ${SOSPD_SRC_FILES}
+      )
+    ELSE(DEFINED SOSPD_SRC_FILES_EXIST)
+        MESSAGE ("SOSPD not installed, run make externalLibs first and configure again")
+    ENDIF(DEFINED SOSPD_SRC_FILES_EXIST)
+ENDIF()

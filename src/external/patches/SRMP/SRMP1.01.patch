@@ -1,0 +1,2508 @@
+diff -rupN SRMP-v1.01.src-patched_old/AddEdges.cpp SRMP-v1.01.src-patched/AddEdges.cpp
+--- SRMP-v1.01.src-patched_old/AddEdges.cpp	2014-01-10 11:14:14.000000000 +0100
++++ SRMP-v1.01.src-patched/AddEdges.cpp	2014-08-26 11:22:06.156054000 +0200
+@@ -21,16 +21,16 @@
+ #include <math.h>
+ #include <assert.h>
+ #include "util.h"
+-#include "../SRMP.h"
+-#include "../FactorTypes/PairwiseType.h"
+-#include "../FactorTypes/GeneralType.h"
++#include "SRMP.h"
++#include "PairwiseType.h"
++#include "GeneralType.h"
+ 
+ 
+ ////////////////////////////////////////////////////////////////////////////////////
+ ////////////////////////////////////////////////////////////////////////////////////
+ ////////////////////////////////////////////////////////////////////////////////////
+ 
+-inline void Energy::IntersectFactors(NonSingletonFactor* A, NonSingletonFactor* B, NonSingletonFactor* C)
++inline void srmpLib::Energy::IntersectFactors(NonSingletonFactor* A, NonSingletonFactor* B, NonSingletonFactor* C)
+ {
+ 	C->arity = 0;
+ 	C->is_unsorted = 0;
+@@ -46,7 +46,7 @@ inline void Energy::IntersectFactors(Non
+ 	}
+ }
+ 
+-inline bool Energy::isSuperset(NonSingletonFactor* A, NonSingletonFactor* B)
++inline bool srmpLib::Energy::isSuperset(NonSingletonFactor* A, NonSingletonFactor* B)
+ {
+ 	int i=0, j=0;
+ 	Node** Anodes = A->nodes + A->is_unsorted*A->arity;
+@@ -60,7 +60,7 @@ inline bool Energy::isSuperset(NonSingle
+ 	return (j==B->arity) ? true : false;
+ }
+ 
+-bool Energy::isSuperset(FactorId _A, FactorId _B)
++bool srmpLib::Energy::isSuperset(FactorId _A, FactorId _B)
+ {
+ 	NonSingletonFactor* A = (NonSingletonFactor*)_A;
+ 	Factor* B = (Factor*)_B;
+@@ -80,7 +80,7 @@ bool Energy::isSuperset(FactorId _A, Fac
+ 	return true;
+ }
+ 
+-void Energy::AddRelaxationEdge(FactorId _A, FactorId _B)
++void srmpLib::Energy::AddRelaxationEdge(FactorId _A, FactorId _B)
+ {
+ 	AllocateEdges();
+ 
+@@ -107,7 +107,7 @@ void Energy::AddRelaxationEdge(FactorId
+ 	e->m = NULL;
+ }
+ 
+-void Energy::SetMinimalEdges()
++void srmpLib::Energy::SetMinimalEdges()
+ {
+ 	if (edges)
+ 	{
+@@ -152,7 +152,7 @@ void Energy::SetMinimalEdges()
+ 
+ struct FactorListItem
+ {
+-	Energy::NonSingletonFactor* A;
++    srmpLib::Energy::NonSingletonFactor* A;
+ 	FactorListItem* next;
+ };
+ 
+@@ -162,20 +162,20 @@ public:
+ 	NonSingletonFactorOrderedList(int arity_max);
+ 	~NonSingletonFactorOrderedList();
+ 
+-	void Add(Energy::NonSingletonFactor* A); // use A->rep for maintaining the list
+-	Energy::NonSingletonFactor* RemoveLargest();
++	void Add(srmpLib::Energy::NonSingletonFactor* A); // use A->rep for maintaining the list
++	srmpLib::Energy::NonSingletonFactor* RemoveLargest();
+ 
+ private:
+ 	int arity_max, r_current;
+-	Energy::NonSingletonFactor** lists_begin;
+-	Energy::NonSingletonFactor** lists_end;
++	srmpLib::Energy::NonSingletonFactor** lists_begin;
++	srmpLib::Energy::NonSingletonFactor** lists_end;
+ };
+ 
+ NonSingletonFactorOrderedList::NonSingletonFactorOrderedList(int _arity_max)
+ 	: arity_max(_arity_max), r_current(_arity_max)
+ {
+ 	int r;
+-	lists_begin = new Energy::NonSingletonFactor*[2*(arity_max+1)];
++	lists_begin = new srmpLib::Energy::NonSingletonFactor*[2*(arity_max+1)];
+ 	lists_end = lists_begin + (arity_max+1);
+ 	for (r=1; r<=arity_max; r++) lists_begin[r] = lists_end[r] = NULL;
+ }
+@@ -183,21 +183,21 @@ NonSingletonFactorOrderedList::~NonSingl
+ {
+ 	delete [] lists_begin;
+ }
+-void NonSingletonFactorOrderedList::Add(Energy::NonSingletonFactor* A)
++void NonSingletonFactorOrderedList::Add(srmpLib::Energy::NonSingletonFactor* A)
+ {
+ 	if (lists_end[A->arity]) lists_end[A->arity]->rep = (double*)A;
+ 	else lists_begin[A->arity] = A;
+ 	lists_end[A->arity] = A;
+ }
+-Energy::NonSingletonFactor* NonSingletonFactorOrderedList::RemoveLargest()
++srmpLib::Energy::NonSingletonFactor* NonSingletonFactorOrderedList::RemoveLargest()
+ {
+ 	while ( 1 )
+ 	{
+ 		if (lists_begin[r_current])
+ 		{
+-			Energy::NonSingletonFactor* A = lists_begin[r_current];
++		    srmpLib::Energy::NonSingletonFactor* A = lists_begin[r_current];
+ 			lists_begin[r_current] = (lists_begin[r_current] == lists_end[r_current]) ? 
+-				NULL : (Energy::NonSingletonFactor*) A->rep;
++				NULL : (srmpLib::Energy::NonSingletonFactor*) A->rep;
+ 			return A;
+ 		}
+ 		r_current --;
+@@ -217,7 +217,7 @@ Energy::NonSingletonFactor* NonSingleton
+ //
+ // As the final step, go through singleton factors and add edges A->{i} for all A in the list for {i}
+ 
+-void Energy::SetMaximalEdges()
++void srmpLib::Energy::SetMaximalEdges()
+ {
+ 	int t, r, rA;
+ 	NonSingletonFactor* A;
+@@ -395,11 +395,11 @@ void Energy::SetMaximalEdges()
+ // A and B must be of a general type with non-zero costs.
+ // t must be of 'GeneralFactorType'
+ // The function moves costs of B to A
+-void MergeFactorCosts(Energy::NonSingletonFactor* A, Energy::NonSingletonFactor* B, GeneralFactorType* t)
++void MergeFactorCosts(srmpLib::Energy::NonSingletonFactor* A, srmpLib::Energy::NonSingletonFactor* B, srmpLib::GeneralFactorType* t)
+ {
+ 	int k;
+-	Energy::NonSingletonFactor _A;
+-	Energy::Edge e;
++	srmpLib::Energy::NonSingletonFactor _A;
++	srmpLib::Energy::Edge e;
+ 
+ 	_A.arity = A->arity;
+ 	_A.K = A->K;
+@@ -421,7 +421,7 @@ void MergeFactorCosts(Energy::NonSinglet
+ 	t->ComputePartialReparameterization(&_A, _A.data);
+ }
+ 
+-void Energy::MoveCostsToOuterFactors()
++void srmpLib::Energy::MoveCostsToOuterFactors()
+ {
+ 	if (edges)
+ 	{
+@@ -557,27 +557,27 @@ void Energy::MoveCostsToOuterFactors()
+ class UnionFind // uses Factor::rep
+ {
+ public:
+-	void Add(Energy::Factor* A);
+-	void Add(Energy::Factor* A, Energy::Factor* B); // add A to the same component as B
+-	bool CheckAndMerge(Energy::Factor* A, Energy::Factor* B); // returns true if A, B were already in the same component
++	void Add(srmpLib::Energy::Factor* A);
++	void Add(srmpLib::Energy::Factor* A, srmpLib::Energy::Factor* B); // add A to the same component as B
++	bool CheckAndMerge(srmpLib::Energy::Factor* A, srmpLib::Energy::Factor* B); // returns true if A, B were already in the same component
+ };
+ 
+-inline void UnionFind::Add(Energy::Factor* A)
++inline void UnionFind::Add(srmpLib::Energy::Factor* A)
+ {
+ 	A->rep = (double*) A;
+ }
+ 
+-inline void UnionFind::Add(Energy::Factor* A, Energy::Factor* B)
++inline void UnionFind::Add(srmpLib::Energy::Factor* A, srmpLib::Energy::Factor* B)
+ {
+ 	A->rep = (double*) B;
+ }
+ 
+-bool UnionFind::CheckAndMerge(Energy::Factor* A, Energy::Factor* B)
++bool UnionFind::CheckAndMerge(srmpLib::Energy::Factor* A, srmpLib::Energy::Factor* B)
+ {
+-	Energy::Factor* A_parent = A;
+-	while (A_parent != (Energy::Factor*)A_parent->rep) A_parent = (Energy::Factor*)A_parent->rep;
+-	Energy::Factor* B_parent = B;
+-	while (B_parent != (Energy::Factor*)B_parent->rep) B_parent = (Energy::Factor*)B_parent->rep;
++    srmpLib::Energy::Factor* A_parent = A;
++	while (A_parent != (srmpLib::Energy::Factor*)A_parent->rep) A_parent = (srmpLib::Energy::Factor*)A_parent->rep;
++	srmpLib::Energy::Factor* B_parent = B;
++	while (B_parent != (srmpLib::Energy::Factor*)B_parent->rep) B_parent = (srmpLib::Energy::Factor*)B_parent->rep;
+ 
+ 	bool result;
+ 	if (A_parent == B_parent) result = true;
+@@ -590,14 +590,14 @@ bool UnionFind::CheckAndMerge(Energy::Fa
+ 	// path compression
+ 	while (A != A_parent)
+ 	{
+-		Energy::Factor* A_next = (Energy::Factor*) A->rep;
++	    srmpLib::Energy::Factor* A_next = (srmpLib::Energy::Factor*) A->rep;
+ 		A->rep = (double*) A_parent;
+ 		A = A_next;
+ 	}
+ 	A = B;
+ 	while (A != A_parent)
+ 	{
+-		Energy::Factor* A_next = (Energy::Factor*) A->rep;
++	    srmpLib::Energy::Factor* A_next = (srmpLib::Energy::Factor*) A->rep;
+ 		A->rep = (double*) A_parent;
+ 		A = A_next;
+ 	}
+@@ -607,11 +607,11 @@ bool UnionFind::CheckAndMerge(Energy::Fa
+ 
+ struct NestedEdgePair
+ {
+-	Energy::NonSingletonFactor* A;
+-	Energy::Factor* B;
++    srmpLib::Energy::NonSingletonFactor* A;
++    srmpLib::Energy::Factor* B;
+ };
+ 
+-void Energy::SetFullEdges(int method)
++void srmpLib::Energy::SetFullEdges(int method)
+ {
+ 	if (edges)
+ 	{
+diff -rupN SRMP-v1.01.src-patched_old/CMP.cpp SRMP-v1.01.src-patched/CMP.cpp
+--- SRMP-v1.01.src-patched_old/CMP.cpp	2014-01-14 09:47:46.000000000 +0100
++++ SRMP-v1.01.src-patched/CMP.cpp	2014-08-26 14:05:49.364318000 +0200
+@@ -21,12 +21,12 @@
+ #include <math.h>
+ #include <assert.h>
+ #include "util.h"
+-#include "../SRMP.h"
++#include "SRMP.h"
+ 
+ 
+ 
+ 
+-double Energy::InitCMP(Sequence& seq, Options& options)
++double srmpLib::Energy::InitCMP(Sequence& seq, Options& options)
+ {
+ 	int t;
+ 	Node* i;
+@@ -46,7 +46,7 @@ double Energy::InitCMP(Sequence& seq, Op
+ 		else if (!_A->first_out)
+ 		{
+ 			_A->rep = NULL;
+-			LB_init += SEND_MPLP_MESSAGES(_A, false);
++			LB_init += SRMP_SEND_MPLP_MESSAGES(_A, false);
+ 		}
+ 	}
+ 
+@@ -94,7 +94,7 @@ double Energy::InitCMP(Sequence& seq, Op
+ 	return LB_init;
+ }
+ 
+-double Energy::SolveCMP(Options& options)
++double srmpLib::Energy::SolveCMP(Options& options)
+ {
+ 	double time_start = get_time();
+ 
+@@ -135,13 +135,13 @@ double Energy::SolveCMP(Options& options
+ 			int b, K = B->K;
+ 
+ 			if (B->arity == 1) memcpy(theta, B->data, K*sizeof(double));
+-			else COMPUTE_PARTIAL_REPARAMETERIZATION((NonSingletonFactor*)B, theta);
++			else SRMP_COMPUTE_PARTIAL_REPARAMETERIZATION((NonSingletonFactor*)B, theta);
+ 
+ 			int w_total = B->weight_forward;
+ 			int w_compute_bound = (B->compute_bound) ? B->weight_forward : 0;
+ 			for (e=B->first_in; e; e=e->next_in)
+ 			{
+-				v = SEND_MESSAGE(e);
++				v = SRMP_SEND_MESSAGE(e);
+ 				if (e->compute_bound) { LB += v; w_compute_bound += e->weight_forward; }
+ 				for (b=0; b<K; b++) theta[b] += e->m[b]; 
+ 				w_total += e->weight_forward;
+@@ -188,7 +188,7 @@ double Energy::SolveCMP(Options& options
+ 			else                  printf("lower bound=%f\n", LB);
+ 		}
+ 
+-#ifdef VNK_DEBUG
++#ifdef SRMP_VNK_DEBUG
+ 		double LB_check = ComputeLowerBound();
+ 		assert (fabs(LB - LB_check) < 1e-5);
+ #endif
+diff -rupN SRMP-v1.01.src-patched_old/GeneralType.cpp SRMP-v1.01.src-patched/GeneralType.cpp
+--- SRMP-v1.01.src-patched_old/GeneralType.cpp	2013-07-04 13:30:48.000000000 +0200
++++ SRMP-v1.01.src-patched/GeneralType.cpp	2014-08-26 11:34:17.548074000 +0200
+@@ -20,16 +20,16 @@
+ #include "GeneralType.h"
+ 
+ 
+-GeneralFactorType::GeneralFactorType() 
++srmpLib::GeneralFactorType::GeneralFactorType()
+ 	: buf(4096)
+ {
+ }
+ 
+-GeneralFactorType::~GeneralFactorType()
++srmpLib::GeneralFactorType::~GeneralFactorType()
+ {
+ }
+ 
+-void GeneralFactorType::InitFactor(Energy::NonSingletonFactor* A, double* user_data, unsigned flags)
++void srmpLib::GeneralFactorType::InitFactor(Energy::NonSingletonFactor* A, double* user_data, unsigned flags)
+ {
+ 	if (flags & FLAG_DO_NOT_COPY_INTO_INTERNAL_MEMORY)
+ 	{
+@@ -46,7 +46,7 @@ void GeneralFactorType::InitFactor(Energ
+ 	}
+ }
+ 
+-double GeneralFactorType::GetCost(Energy::NonSingletonFactor* A)
++double srmpLib::GeneralFactorType::GetCost(Energy::NonSingletonFactor* A)
+ {
+ 	if (!A->data) return 0;
+ 
+@@ -60,7 +60,7 @@ double GeneralFactorType::GetCost(Energy
+ 	}
+ }
+ 
+-void SetEdgeTable(int nA, Energy::Node** A, int nB, Energy::Node** B, int* table, int* _buf)
++void SetEdgeTable(int nA, srmpLib::Energy::Node** A, int nB, srmpLib::Energy::Node** B, int* table, int* _buf)
+ {
+ 	int i, j, b=0, k=0;
+ 	int* K_array = _buf;
+@@ -87,7 +87,7 @@ void SetEdgeTable(int nA, Energy::Node**
+ 	}
+ }
+ 
+-void GeneralFactorType::InitEdge(Energy::Edge* e)
++void srmpLib::GeneralFactorType::InitEdge(Energy::Edge* e)
+ {
+ 	int i, j;
+ 	Energy::NonSingletonFactor* A = e->A;
+@@ -118,12 +118,12 @@ void GeneralFactorType::InitEdge(Energy:
+ 	SetEdgeTable(A->arity, A->nodes, i-j, Cnodes, TC, _buf);
+ }
+ 
+-bool GeneralFactorType::PrepareFactor(Energy::NonSingletonFactor* A)
++bool srmpLib::GeneralFactorType::PrepareFactor(Energy::NonSingletonFactor* A)
+ {
+ 	return true;
+ }
+ 
+-void GeneralFactorType::ComputePartialReparameterization(Energy::NonSingletonFactor* A, double* theta)
++void srmpLib::GeneralFactorType::ComputePartialReparameterization(Energy::NonSingletonFactor* A, double* theta)
+ {
+ 	Energy::Edge* e;
+ 	int b, c, KA = A->K;
+@@ -144,7 +144,7 @@ void GeneralFactorType::ComputePartialRe
+ 	}
+ }
+ 
+-double GeneralFactorType::SendMessage(Energy::Edge* e)
++double srmpLib::GeneralFactorType::SendMessage(Energy::Edge* e)
+ {
+ 	Energy::NonSingletonFactor* A = e->A;
+ 	int a, b, c, KA = A->K;
+@@ -191,7 +191,7 @@ double GeneralFactorType::SendMessage(En
+ 	return delta;
+ }
+ 
+-void GeneralFactorType::SendRestrictedMessage(Energy::Edge* e)
++void srmpLib::GeneralFactorType::SendRestrictedMessage(Energy::Edge* e)
+ {
+ 	Energy::NonSingletonFactor* A = e->A;
+ 	int a, b, c, KA = A->K;
+@@ -229,7 +229,7 @@ void GeneralFactorType::SendRestrictedMe
+ 
+ 
+ 
+-double GeneralFactorType::SendMPLPMessages(Energy::NonSingletonFactor* A, bool set_solution)
++double srmpLib::GeneralFactorType::SendMPLPMessages(Energy::NonSingletonFactor* A, bool set_solution)
+ {
+ 	int total_weight = A->weight_forward;
+ 	int a, b, c, KA = A->K;
+diff -rupN SRMP-v1.01.src-patched_old/GeneralType.h SRMP-v1.01.src-patched/GeneralType.h
+--- SRMP-v1.01.src-patched_old/GeneralType.h	2013-07-04 13:30:48.000000000 +0200
++++ SRMP-v1.01.src-patched/GeneralType.h	2014-08-26 14:23:05.604345000 +0200
+@@ -20,10 +20,12 @@
+ */
+ 
+ 
+-#ifndef HUIAHFIAUGISAUUSFAISFAFAFJGSNV
+-#define HUIAHFIAUGISAUUSFAISFAFAFJGSNV
++#ifndef SRMP_HUIAHFIAUGISAUUSFAISFAFAFJGSNV
++#define SRMP_HUIAHFIAUGISAUUSFAISFAFAFJGSNV
+ 
+-#include "../SRMP.h"
++#include "SRMP.h"
++
++namespace srmpLib {
+ 
+ // for the description of member functions see SRMP.h, structure FactorType
+ 
+@@ -53,5 +55,5 @@ private:
+ 	ReusableBuffer rbuf;
+ };
+ 
+-
++} // namespace srmpLib
+ #endif
+diff -rupN SRMP-v1.01.src-patched_old/MPLP.cpp SRMP-v1.01.src-patched/MPLP.cpp
+--- SRMP-v1.01.src-patched_old/MPLP.cpp	2014-01-14 09:52:10.000000000 +0100
++++ SRMP-v1.01.src-patched/MPLP.cpp	2014-08-26 14:05:53.232318000 +0200
+@@ -21,9 +21,9 @@
+ #include <math.h>
+ #include <assert.h>
+ #include "util.h"
+-#include "../SRMP.h"
++#include "SRMP.h"
+ 
+-double Energy::InitMPLP(Energy::Sequence& seq, Options& options)
++double srmpLib::Energy::InitMPLP(Energy::Sequence& seq, Options& options)
+ {
+ 	int t;
+ 	Node* i;
+@@ -39,7 +39,7 @@ double Energy::InitMPLP(Energy::Sequence
+ 		else if (!A->first_in)
+ 		{
+ 			A->rep = NULL;
+-			LB_init += SEND_MPLP_MESSAGES(A, false);
++			LB_init += SRMP_SEND_MPLP_MESSAGES(A, false);
+ 		}
+ 	}
+ 	for (i=nodes; i<nodes+node_num; i++)
+@@ -91,7 +91,7 @@ double Energy::InitMPLP(Energy::Sequence
+ }
+ 	
+ 	
+-double Energy::SolveMPLP(Options& options)
++double srmpLib::Energy::SolveMPLP(Options& options)
+ {
+ 	double time_start = get_time();
+ 
+@@ -189,7 +189,7 @@ double Energy::SolveMPLP(Options& option
+ 				}
+ 			}
+ 
+-			v = SEND_MPLP_MESSAGES(A, compute_solution);
++			v = SRMP_SEND_MPLP_MESSAGES(A, compute_solution);
+ 			if (A->compute_bound) LB += v;
+ 
+ 			for (e=A->first_out; e; e=e->next_out)
+@@ -229,7 +229,7 @@ double Energy::SolveMPLP(Options& option
+ 					}
+ 				}
+ 
+-				v = SEND_MPLP_MESSAGES(A, compute_solution);
++				v = SRMP_SEND_MPLP_MESSAGES(A, compute_solution);
+ 				if (A->compute_bound) LB += v;
+ 
+ 				for (e=A->first_out; e; e=e->next_out)
+@@ -258,7 +258,7 @@ double Energy::SolveMPLP(Options& option
+ 			else                                        printf("lower bound=%f\n", LB);
+ 		}
+ 
+-#ifdef VNK_DEBUG
++#ifdef SRMP_VNK_DEBUG
+ 		double LB_check = ComputeLowerBound();
+ 		assert (fabs(LB - LB_check) < 1e-5);
+ #endif
+diff -rupN SRMP-v1.01.src-patched_old/PQ.h SRMP-v1.01.src-patched/PQ.h
+--- SRMP-v1.01.src-patched_old/PQ.h	2013-07-04 13:30:48.000000000 +0200
++++ SRMP-v1.01.src-patched/PQ.h	2014-08-26 14:22:03.828344000 +0200
+@@ -19,15 +19,17 @@
+     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+ 
+-#ifndef HFKSJHFKJHARBABDAKFAF
+-#define HFKSJHFKJHARBABDAKFAF
++#ifndef SRMP_HFKSJHFKJHARBABDAKFAF
++#define SRMP_HFKSJHFKJHARBABDAKFAF
+ 
+ // exactly one flag must be defined
+-//#define PQ_MULTIPASS
+-#define PQ_INTERLEAVED_MULTIPASS
++//#define SRMP_PQ_MULTIPASS
++#define SRMP_PQ_INTERLEAVED_MULTIPASS
+ 
+ #include <string.h>
+ 
++namespace srmpLib {
++
+ template <typename REAL> class PriorityQueue
+ {
+ public:
+@@ -56,7 +58,7 @@ public:
+ 
+ 	void Reset();
+ 	void Add(Item* i);
+-#define Remove(i, buf) _Remove(i)
++#define SRMP_Remove(i, buf) _Remove(i)
+ 	void _Remove(Item* i);
+ 	void Decrease(Item* i_old, Item* i_new, void* buf);
+ 	Item* GetMin();
+@@ -133,7 +135,7 @@ template <typename REAL> inline void Pri
+ */
+ 
+ // sets i = merge(i, j). Ignores parentPQ and rightPQ for i and j.
+-#define MERGE_PQ(i, j)\
++#define SRMP_MERGE_PQ(i, j)\
+ 	{\
+ 		if (i->slack <= j->slack)\
+ 		{\
+@@ -158,7 +160,7 @@ template <typename REAL> inline void Pri
+ 	rootPQ->parentPQ = NULL;
+ 	if (i)
+ 	{
+-#ifdef PQ_MULTIPASS
++#ifdef SRMP_PQ_MULTIPASS
+ 		while ( i->rightPQ )
+ 		{
+ 			Item** prev_ptr = &rootPQ;
+@@ -168,7 +170,7 @@ template <typename REAL> inline void Pri
+ 				{
+ 					Item* j = i->rightPQ;
+ 					Item* next = j->rightPQ;
+-					MERGE_PQ(i, j);
++					SRMP_MERGE_PQ(i, j);
+ 					*prev_ptr = i;
+ 					if (!next) { i->rightPQ = NULL; break; }
+ 					prev_ptr = &i->rightPQ;
+@@ -185,7 +187,7 @@ template <typename REAL> inline void Pri
+ 		}
+ #endif
+ 
+-#ifdef PQ_INTERLEAVED_MULTIPASS
++#ifdef SRMP_PQ_INTERLEAVED_MULTIPASS
+ 		while ( i->rightPQ )
+ 		{
+ 			Item* prev = NULL;
+@@ -196,7 +198,7 @@ template <typename REAL> inline void Pri
+ 				{
+ 					Item* j = i->rightPQ;
+ 					next = j->rightPQ;
+-					MERGE_PQ(i, j);
++					SRMP_MERGE_PQ(i, j);
+ 				}
+ 				else next = NULL;
+ 				i->rightPQ = prev;
+@@ -276,7 +278,7 @@ template <typename REAL> inline void Pri
+ 	}
+ 	else
+ 	{
+-		Remove(i_old, _buf);
++	    SRMP_Remove(i_old, _buf);
+ 		Add(i_new);
+ 	}
+ }
+@@ -393,4 +395,6 @@ template <typename REAL> inline typename
+ 	}
+ }
+ 
++} // namespace srmpLib
++
+ #endif
+diff -rupN SRMP-v1.01.src-patched_old/PairwiseDualType.cpp SRMP-v1.01.src-patched/PairwiseDualType.cpp
+--- SRMP-v1.01.src-patched_old/PairwiseDualType.cpp	2014-01-10 11:15:16.000000000 +0100
++++ SRMP-v1.01.src-patched/PairwiseDualType.cpp	2014-08-26 13:50:14.968292000 +0200
+@@ -19,11 +19,11 @@
+ #include <assert.h>
+ #include "PairwiseDualType.h"
+ #include "GeneralType.h"
+-#include "../Algs/util.h"
++#include "util.h"
+ 
+-#define WHICH_NODE user1
++#define SRMP_WHICH_NODE user1
+ 
+-int PairwiseDualFactorType::ComputeRestriction(Energy::Edge* e, int k)
++int srmpLib::PairwiseDualFactorType::ComputeRestriction(Energy::Edge* e, int k)
+ {
+ 	int i;
+ 	for (i=e->A->arity-1; i>=0; i--)
+@@ -45,15 +45,15 @@ int PairwiseDualFactorType::ComputeRestr
+ 	return k;
+ }
+ 
+-PairwiseDualFactorType::PairwiseDualFactorType() : buf(4096)
++srmpLib::PairwiseDualFactorType::PairwiseDualFactorType() : buf(4096)
+ {
+ }
+ 
+-PairwiseDualFactorType::~PairwiseDualFactorType()
++srmpLib::PairwiseDualFactorType::~PairwiseDualFactorType()
+ {
+ }
+ 
+-void PairwiseDualFactorType::InitFactor(Energy::NonSingletonFactor* A, double* user_data, unsigned flags)
++void srmpLib::PairwiseDualFactorType::InitFactor(Energy::NonSingletonFactor* A, double* user_data, unsigned flags)
+ {
+ 	Energy::Edge* e[2] = { ((Energy::Edge**)user_data)[0], ((Energy::Edge**)user_data)[1] };
+ 	assert(A->arity == 2);
+@@ -63,7 +63,7 @@ void PairwiseDualFactorType::InitFactor(
+ 	memcpy(A->data, user_data, 2*sizeof(Energy::Edge*));
+ }
+ 
+-double PairwiseDualFactorType::GetCost(Energy::NonSingletonFactor* AB)
++double srmpLib::PairwiseDualFactorType::GetCost(Energy::NonSingletonFactor* AB)
+ {
+ 	Energy::Edge* e[2] = { ((Energy::Edge**)AB->data)[0], ((Energy::Edge**)AB->data)[1] };
+ 	Energy::NonSingletonFactor* A[2] = { e[0]->A, e[1]->A };
+@@ -83,22 +83,22 @@ double PairwiseDualFactorType::GetCost(E
+ 	for (i=A[1]->arity-1; i>=0; i--)
+ 	{
+ 		int Ki = A[1]->nodes[i]->K;
+-		if (A[1]->nodes[i]->solution >= 0 && A[1]->nodes[i]->solution != k % Ki) return ENERGY_INFTY;
++		if (A[1]->nodes[i]->solution >= 0 && A[1]->nodes[i]->solution != k % Ki) return SRMP_ENERGY_INFTY;
+ 		k /= Ki;
+ 	}
+ 
+ 	return 0;
+ }
+ 
+-void PairwiseDualFactorType::InitEdge(Energy::Edge* e)
++void srmpLib::PairwiseDualFactorType::InitEdge(Energy::Edge* e)
+ {
+ 	Energy::NonSingletonFactor* A = e->A;
+ 
+-	if ((Energy::Node*)e->B == A->nodes[0]) e->WHICH_NODE = 0;
+-	else                                    e->WHICH_NODE = 1;
++	if ((Energy::Node*)e->B == A->nodes[0]) e->SRMP_WHICH_NODE = 0;
++	else                                    e->SRMP_WHICH_NODE = 1;
+ }
+ 
+-bool PairwiseDualFactorType::PrepareFactor(Energy::NonSingletonFactor* A)
++bool srmpLib::PairwiseDualFactorType::PrepareFactor(Energy::NonSingletonFactor* A)
+ {
+ 	if (A->first_in) return false; // if there are incoming edges then convert factor to general 'PairwiseType'
+ 	if (!A->first_out || !A->first_out->next_out || A->first_out->next_out->next_out
+@@ -106,7 +106,7 @@ bool PairwiseDualFactorType::PrepareFact
+ 	return true;
+ }
+ 
+-void PairwiseDualFactorType::ComputePartialReparameterization(Energy::NonSingletonFactor* A, double* theta)
++void srmpLib::PairwiseDualFactorType::ComputePartialReparameterization(Energy::NonSingletonFactor* A, double* theta)
+ {
+ 	// this function should never be called since incoming edges are not allowed (as specified in PrepareFactor())
+ 	printf("Error: ComputePartialReparameterization() should not be called for this type. (Trying to save non-standard factor?");
+@@ -114,11 +114,11 @@ void PairwiseDualFactorType::ComputePart
+ }
+ 
+ 
+-double PairwiseDualFactorType::SendMessage(Energy::Edge* e0)
++double srmpLib::PairwiseDualFactorType::SendMessage(Energy::Edge* e0)
+ {
+ 	Energy::NonSingletonFactor* AC = e0->A;
+-	Energy::Edge* eA = ((Energy::Edge**)AC->data)[1-e0->WHICH_NODE];
+-	Energy::Edge* eC = ((Energy::Edge**)AC->data)[e0->WHICH_NODE];
++	Energy::Edge* eA = ((Energy::Edge**)AC->data)[1-e0->SRMP_WHICH_NODE];
++	Energy::Edge* eC = ((Energy::Edge**)AC->data)[e0->SRMP_WHICH_NODE];
+ 	Energy::NonSingletonFactor* A = eA->A;
+ 	Energy::NonSingletonFactor* C = eC->A;
+ 	Energy::Factor* B = eA->B;
+@@ -154,22 +154,22 @@ double PairwiseDualFactorType::SendMessa
+ 	return delta;
+ }
+ 
+-void PairwiseDualFactorType::SendRestrictedMessage(Energy::Edge* e0)
++void srmpLib::PairwiseDualFactorType::SendRestrictedMessage(Energy::Edge* e0)
+ {
+ 	Energy::NonSingletonFactor* AC = e0->A;
+-	Energy::Edge* eA = ((Energy::Edge**)AC->data)[1-e0->WHICH_NODE];
+-	Energy::Edge* eC = ((Energy::Edge**)AC->data)[e0->WHICH_NODE];
+-	Energy::NonSingletonFactor* A = eA->A;
++	Energy::Edge* eA = ((Energy::Edge**)AC->data)[1-e0->SRMP_WHICH_NODE];
++	Energy::Edge* eC = ((Energy::Edge**)AC->data)[e0->SRMP_WHICH_NODE];
++	//Energy::NonSingletonFactor* A = eA->A;
+ 	Energy::NonSingletonFactor* C = eC->A;
+ 	Energy::Factor* B = eA->B;
+ 	int a, b, c;
+ 
+-	a = AC->nodes[1-e0->WHICH_NODE]->solution;
++	a = AC->nodes[1-e0->SRMP_WHICH_NODE]->solution;
+ 	b = ComputeRestriction(eA, a);
+ 
+ 	int* TC = (int*) eC->send_message_data;
+ 	int* TCbar = TC + B->K;
+-	for (c=0; c<C->K; c++) e0->m[c] = ENERGY_INFTY;
++	for (c=0; c<C->K; c++) e0->m[c] = SRMP_ENERGY_INFTY;
+ 	for (c=0; c<C->K/B->K; c++)
+ 	{
+ 		e0->m[TC[b] + TCbar[c]] = 0;
+@@ -177,7 +177,7 @@ void PairwiseDualFactorType::SendRestric
+ }
+ 
+ 
+-double PairwiseDualFactorType::SendMPLPMessages(Energy::NonSingletonFactor* _A, bool set_solution)
++double srmpLib::PairwiseDualFactorType::SendMPLPMessages(Energy::NonSingletonFactor* _A, bool set_solution)
+ {
+ 	Energy::Edge* eA[2] = { ((Energy::Edge**)_A->data)[0], ((Energy::Edge**)_A->data)[1] };
+ 	Energy::NonSingletonFactor* A[2] = { eA[0]->A, eA[1]->A };
+@@ -242,7 +242,7 @@ double PairwiseDualFactorType::SendMPLPM
+ 	}
+ 
+ 	int weight[2];
+-	for (Energy::Edge* e=_A->first_out; e; e=e->next_out) weight[e->WHICH_NODE] = e->weight_forward;
++	for (Energy::Edge* e=_A->first_out; e; e=e->next_out) weight[e->SRMP_WHICH_NODE] = e->weight_forward;
+ 	int total_weight = _A->weight_forward + weight[0] + weight[1];
+ 	double total_weight_inv = 1.0 / total_weight;
+ 
+@@ -286,12 +286,12 @@ inline double* CAST_REP(int i)
+ 
+ struct PairwiseDualEdgePtr
+ {
+-	Energy::Edge* e;
++    srmpLib::Energy::Edge* e;
+ 	bool operator<(const PairwiseDualEdgePtr& p) const { return (e->A->rep < p.e->A->rep); }
+ 	bool operator>(const PairwiseDualEdgePtr& p) const { return (e->A->rep > p.e->A->rep); }
+ };
+ 
+-void Energy::SetFullEdgesDual(int sort_flag)
++void srmpLib::Energy::SetFullEdgesDual(int sort_flag)
+ {
+ 	SetFullEdges(2);
+ 
+@@ -383,7 +383,7 @@ void Energy::SetFullEdgesDual(int sort_f
+ 	dual_graph->primal_graph = this;
+ }
+ 
+-double Energy::SolveDualGraph(Options& options)
++double srmpLib::Energy::SolveDualGraph(Options& options)
+ {
+ 	dual_solution_was_inconsistent = false;
+ 	double LB = dual_graph->Solve(options);
+@@ -408,7 +408,7 @@ double Energy::SolveDualGraph(Options& o
+ }
+ 
+ 
+-double Energy::ConvertSolutionDualToPrimal()
++double srmpLib::Energy::ConvertSolutionDualToPrimal()
+ {
+ 	int t;
+ 	for (t=0; t<dual_sequence->num; t++)
+@@ -458,4 +458,4 @@ double Energy::ConvertSolutionDualToPrim
+ 
+ 	return ComputeCost();
+ }
+-*/
+\ No newline at end of file
++*/
+diff -rupN SRMP-v1.01.src-patched_old/PairwiseDualType.h SRMP-v1.01.src-patched/PairwiseDualType.h
+--- SRMP-v1.01.src-patched_old/PairwiseDualType.h	2013-07-04 13:30:48.000000000 +0200
++++ SRMP-v1.01.src-patched/PairwiseDualType.h	2014-08-26 14:22:50.184345000 +0200
+@@ -19,10 +19,12 @@
+     along with SRMP.  If not, see <http://www.gnu.org/licenses/>.
+ */
+ 
+-#ifndef LAKSJFLAKSFLAKSFJNALSFFAISF
+-#define LAKSJFLAKSFLAKSFJNALSFFAISF
++#ifndef SRMP_LAKSJFLAKSFLAKSFJNALSFFAISF
++#define SRMP_LAKSJFLAKSFLAKSFJNALSFFAISF
+ 
+-#include "../SRMP.h"
++#include "SRMP.h"
++
++namespace srmpLib {
+ 
+ struct PairwiseDualFactorType : Energy::FactorType
+ {
+@@ -57,5 +59,5 @@ private:
+ 
+ };
+ 
+-
++} // namespace srmpLib
+ #endif
+diff -rupN SRMP-v1.01.src-patched_old/PairwiseType.cpp SRMP-v1.01.src-patched/PairwiseType.cpp
+--- SRMP-v1.01.src-patched_old/PairwiseType.cpp	2013-07-04 13:30:48.000000000 +0200
++++ SRMP-v1.01.src-patched/PairwiseType.cpp	2014-08-26 14:16:15.752334000 +0200
+@@ -19,17 +19,17 @@
+ #include <assert.h>
+ #include "PairwiseType.h"
+ 
+-#define WHICH_NODE user1
++#define SRMP_WHICH_NODE user1
+ 
+-PairwiseFactorType::PairwiseFactorType() : buf(4096)
++srmpLib::PairwiseFactorType::PairwiseFactorType() : buf(4096)
+ {
+ }
+ 
+-PairwiseFactorType::~PairwiseFactorType()
++srmpLib::PairwiseFactorType::~PairwiseFactorType()
+ {
+ }
+ 
+-void PairwiseFactorType::InitFactor(Energy::NonSingletonFactor* A, double* user_data, unsigned flags)
++void srmpLib::PairwiseFactorType::InitFactor(Energy::NonSingletonFactor* A, double* user_data, unsigned flags)
+ {
+ 	if ((flags & FLAG_DO_NOT_COPY_INTO_INTERNAL_MEMORY) && user_data)
+ 	{
+@@ -43,29 +43,29 @@ void PairwiseFactorType::InitFactor(Ener
+ 	}
+ }
+ 
+-double PairwiseFactorType::GetCost(Energy::NonSingletonFactor* A)
++double srmpLib::PairwiseFactorType::GetCost(Energy::NonSingletonFactor* A)
+ {
+ 	if (!A->data) return 0;
+ 	return A->data[A->nodes[1]->solution + A->nodes[1]->K*A->nodes[0]->solution];
+ }
+ 
+-void PairwiseFactorType::InitEdge(Energy::Edge* e)
++void srmpLib::PairwiseFactorType::InitEdge(Energy::Edge* e)
+ {
+ 	Energy::NonSingletonFactor* A = e->A;
+ 
+ 	assert (!A->first_out->next_out // single outgoing edge
+ 		|| (!A->first_out->next_out->next_out && A->first_out->B != A->first_out->next_out->B) ); // two outgoing edges to different nodes
+ 
+-	if ((Energy::Node*)e->B == A->nodes[0]) e->WHICH_NODE = 0;
+-	else                                    e->WHICH_NODE = 1;
++	if ((Energy::Node*)e->B == A->nodes[0]) e->SRMP_WHICH_NODE = 0;
++	else                                    e->SRMP_WHICH_NODE = 1;
+ }
+ 
+-bool PairwiseFactorType::PrepareFactor(Energy::NonSingletonFactor* A)
++bool srmpLib::PairwiseFactorType::PrepareFactor(Energy::NonSingletonFactor* A)
+ {
+ 	return true;
+ }
+ 
+-void PairwiseFactorType::ComputePartialReparameterization(Energy::NonSingletonFactor* A, double* theta)
++void srmpLib::PairwiseFactorType::ComputePartialReparameterization(Energy::NonSingletonFactor* A, double* theta)
+ {
+ 	Energy::Edge* e;
+ 	int x, y, X = A->nodes[0]->K, Y = A->nodes[1]->K;
+@@ -73,7 +73,7 @@ void PairwiseFactorType::ComputePartialR
+ 	memcpy(theta, A->data, A->K*sizeof(double));
+ 	for (e=A->first_out; e; e=e->next_out)
+ 	{
+-		if (e->WHICH_NODE == 0)
++		if (e->SRMP_WHICH_NODE == 0)
+ 		{
+ 			for (x=0; x<X; x++)
+ 			for (y=0; y<Y; y++)
+@@ -93,7 +93,7 @@ void PairwiseFactorType::ComputePartialR
+ }
+ 
+ 
+-double PairwiseFactorType::SendMessage(Energy::Edge* e)
++double srmpLib::PairwiseFactorType::SendMessage(Energy::Edge* e)
+ {
+ 	Energy::NonSingletonFactor* A = e->A;
+ 	Energy::Edge* e2;
+@@ -117,13 +117,13 @@ double PairwiseFactorType::SendMessage(E
+ 	if (e2 != e) m_rev = e2->m;
+ 	else
+ 	{
+-		int K_rev = A->nodes[1 - e->WHICH_NODE]->K;
++		int K_rev = A->nodes[1 - e->SRMP_WHICH_NODE]->K;
+ 		m_rev = (double*) rbuf2.Alloc(K_rev*sizeof(double));
+ 		memset(m_rev, 0, K_rev*sizeof(double));
+ 	}
+ 
+ 	int x, y, X = A->nodes[0]->K, Y = A->nodes[1]->K;
+-	if (e->WHICH_NODE == 0)
++	if (e->SRMP_WHICH_NODE == 0)
+ 	{
+ 		for (x=0; x<X; x++)
+ 		{
+@@ -177,15 +177,15 @@ double PairwiseFactorType::SendMessage(E
+ 	return delta;
+ }
+ 
+-void PairwiseFactorType::SendRestrictedMessage(Energy::Edge* e)
++void srmpLib::PairwiseFactorType::SendRestrictedMessage(Energy::Edge* e)
+ {
+ 	Energy::NonSingletonFactor* A = e->A;
+ 	Energy::Edge* e2;
+ 	int x, y, X = A->nodes[0]->K, Y = A->nodes[1]->K;
+ 
+-	assert(A->nodes[e->WHICH_NODE]->solution < 0 && A->nodes[1 - e->WHICH_NODE]->solution >= 0);
++	assert(A->nodes[e->SRMP_WHICH_NODE]->solution < 0 && A->nodes[1 - e->SRMP_WHICH_NODE]->solution >= 0);
+ 
+-	if (e->WHICH_NODE == 0)
++	if (e->SRMP_WHICH_NODE == 0)
+ 	{
+ 		y = A->nodes[1]->solution;
+ 		for (x=0; x<X; x++)
+@@ -218,7 +218,7 @@ void PairwiseFactorType::SendRestrictedM
+ }
+ 
+ 
+-double PairwiseFactorType::_SendMPLPMessages(Energy::NonSingletonFactor* A, bool set_solution)
++double srmpLib::PairwiseFactorType::_SendMPLPMessages(Energy::NonSingletonFactor* A, bool set_solution)
+ {
+ 	int total_weight = A->weight_forward;
+ 	int a, KA = A->K;
+@@ -236,7 +236,7 @@ double PairwiseFactorType::_SendMPLPMess
+ 	int x, y, X = A->nodes[0]->K, Y = A->nodes[1]->K;
+ 	for (e=A->first_out; e; e=e->next_out)
+ 	{
+-		if (e->WHICH_NODE == 0)
++		if (e->SRMP_WHICH_NODE == 0)
+ 		{
+ 			for (x=0, a=0; x<X; x++)
+ 			for (y=0; y<Y; y++, a++)
+@@ -271,7 +271,7 @@ double PairwiseFactorType::_SendMPLPMess
+ 	{
+ 		double rho = e->weight_forward * total_weight_inv;
+ 
+-		if (e->WHICH_NODE == 0)
++		if (e->SRMP_WHICH_NODE == 0)
+ 		{
+ 			for (x=0; x<X; x++)
+ 			{
+@@ -334,7 +334,7 @@ double PairwiseFactorType::_SendMPLPMess
+ 	return delta;
+ }
+ 
+-double PairwiseFactorType::SendMPLPMessages(Energy::NonSingletonFactor* A, bool set_solution)
++double srmpLib::PairwiseFactorType::SendMPLPMessages(Energy::NonSingletonFactor* A, bool set_solution)
+ {
+ 	if (set_solution || A->rep || !A->first_out || !A->first_out->next_out || A->first_out->weight_forward==0 || A->first_out->next_out->weight_forward==0)
+ 	{
+@@ -351,8 +351,8 @@ double PairwiseFactorType::SendMPLPMessa
+ 	int weight[2];
+ 	for (e=A->first_out; e; e=e->next_out)
+ 	{
+-		rep[e->WHICH_NODE] = e->B->rep;
+-		weight[e->WHICH_NODE] = e->weight_forward;
++		rep[e->SRMP_WHICH_NODE] = e->B->rep;
++		weight[e->SRMP_WHICH_NODE] = e->weight_forward;
+ 	}
+ 
+ 	int x, y, X = A->nodes[0]->K, Y = A->nodes[1]->K;
+@@ -457,20 +457,20 @@ double PairwiseFactorType::SendMPLPMessa
+ 
+ 	double* rep[2];
+ 	int weight[2];
+-	rep[e->WHICH_NODE] = e->B->rep;
+-	weight[e->WHICH_NODE] = e->weight_forward;
++	rep[e->SRMP_WHICH_NODE] = e->B->rep;
++	weight[e->SRMP_WHICH_NODE] = e->weight_forward;
+ 	if (e->next_out)
+ 	{
+ 		e = e->next_out;
+-		rep[e->WHICH_NODE] = e->B->rep;
+-		weight[e->WHICH_NODE] = e->weight_forward;
++		rep[e->SRMP_WHICH_NODE] = e->B->rep;
++		weight[e->SRMP_WHICH_NODE] = e->weight_forward;
+ 	}
+ 	else
+ 	{
+-		int K = A->nodes[1 - e->WHICH_NODE]->K;
+-		rep[1 - e->WHICH_NODE] = (double*) rbuf2.Alloc(K*sizeof(double));
+-		memset(rep[1 - e->WHICH_NODE], 0, K*sizeof(double));
+-		weight[1 - e->WHICH_NODE] = 0;
++		int K = A->nodes[1 - e->SRMP_WHICH_NODE]->K;
++		rep[1 - e->SRMP_WHICH_NODE] = (double*) rbuf2.Alloc(K*sizeof(double));
++		memset(rep[1 - e->SRMP_WHICH_NODE], 0, K*sizeof(double));
++		weight[1 - e->SRMP_WHICH_NODE] = 0;
+ 	}
+ 
+ 	int x, y, X = A->nodes[0]->K, Y = A->nodes[1]->K;
+@@ -549,4 +549,4 @@ double PairwiseFactorType::SendMPLPMessa
+ 
+ 	return delta;
+ }
+-#endif
+\ No newline at end of file
++#endif
+diff -rupN SRMP-v1.01.src-patched_old/PairwiseType.h SRMP-v1.01.src-patched/PairwiseType.h
+--- SRMP-v1.01.src-patched_old/PairwiseType.h	2013-07-04 13:30:48.000000000 +0200
++++ SRMP-v1.01.src-patched/PairwiseType.h	2014-08-26 14:22:38.296345000 +0200
+@@ -19,10 +19,12 @@
+     along with SRMP.  If not, see <http://www.gnu.org/licenses/>.
+ */
+ 
+-#ifndef KJANJDSKFNAJSFJASFNAKSJFANBSJF
+-#define KJANJDSKFNAJSFJASFNAKSJFANBSJF
++#ifndef SRMP_KJANJDSKFNAJSFJASFNAKSJFANBSJF
++#define SRMP_KJANJDSKFNAJSFJASFNAKSJFANBSJF
+ 
+-#include "../SRMP.h"
++#include "SRMP.h"
++
++namespace srmpLib {
+ 
+ struct PairwiseFactorType : Energy::FactorType
+ {
+@@ -51,5 +53,5 @@ private:
+ 	ReusableBuffer rbuf2;
+ };
+ 
+-
++} // namespace srmpLib
+ #endif
+diff -rupN SRMP-v1.01.src-patched_old/PatternType.cpp SRMP-v1.01.src-patched/PatternType.cpp
+--- SRMP-v1.01.src-patched_old/PatternType.cpp	2014-01-10 11:22:56.000000000 +0100
++++ SRMP-v1.01.src-patched/PatternType.cpp	2014-08-26 12:43:28.240185000 +0200
+@@ -40,16 +40,16 @@ inline void* CAST(int i)
+ 
+ //////////////////////////////////////////////////////////////////////////////////
+ 
+-PatternFactorType::PatternFactorType() 
++srmpLib::PatternFactorType::PatternFactorType()
+ 	: buf(4096)
+ {
+ }
+ 
+-PatternFactorType::~PatternFactorType()
++srmpLib::PatternFactorType::~PatternFactorType()
+ {
+ }
+ 
+-void PatternFactorType::InitFactor(Energy::NonSingletonFactor* A, double* user_data, unsigned flags)
++void srmpLib::PatternFactorType::InitFactor(Energy::NonSingletonFactor* A, double* user_data, unsigned flags)
+ {
+ 	Input* input = (Input*) user_data;
+ 	if (input->cost > 0)
+@@ -71,7 +71,7 @@ void PatternFactorType::InitFactor(Energ
+ 	}
+ }
+ 
+-double PatternFactorType::GetCost(Energy::NonSingletonFactor* A)
++double srmpLib::PatternFactorType::GetCost(Energy::NonSingletonFactor* A)
+ {
+ 	FactorData* D = (FactorData*) A->data;
+ 	int i;
+@@ -82,11 +82,11 @@ double PatternFactorType::GetCost(Energy
+ 	return D->cost;
+ }
+ 
+-void PatternFactorType::InitEdge(Energy::Edge* e)
++void srmpLib::PatternFactorType::InitEdge(Energy::Edge* e)
+ {
+ }
+ 
+-bool PatternFactorType::PrepareFactor(Energy::NonSingletonFactor* A)
++bool srmpLib::PatternFactorType::PrepareFactor(Energy::NonSingletonFactor* A)
+ {
+ 	if (A->first_in) return false; // if there are incoming edges then convert factor to general 'PairwiseType'
+ 
+@@ -100,17 +100,19 @@ bool PatternFactorType::PrepareFactor(En
+ 
+ 	// set e->send_message_data so that D->pattern[(int)e->send_message_data] == e->B
+ 	// temporarily use Node::arity for this purpose
+-	bool degenerate_case = false;
++	//bool degenerate_case = false;
+ 	for (i=0; i<n; i++) A->nodes[i]->arity = i;
+ 	for (e=A->first_out; e; e=e->next_out)
+ 	{
+-		if (e->B->arity < 0) { degenerate_case = true; break; }
++		//if (e->B->arity < 0) { degenerate_case = true; break; }
++	    if (e->B->arity < 0) { break; }
+ 		e->send_message_data = CAST(e->B->arity);
+ 		e->B->arity = -1;
+ 	}
+ 	for (i=0; i<n; i++)
+ 	{
+-		if (A->nodes[i]->arity >= 0) { degenerate_case = true; break; }
++		//if (A->nodes[i]->arity >= 0) { degenerate_case = true; break; }
++	    if (A->nodes[i]->arity >= 0) { break; }
+ 	}
+ 	for (i=0; i<n; i++) A->nodes[i]->arity = 1;
+ 
+@@ -121,10 +123,11 @@ bool PatternFactorType::PrepareFactor(En
+ 	return true;
+ }
+ 
+-void PatternFactorType::RecomputeFactorData(Energy::NonSingletonFactor* A)
++void srmpLib::PatternFactorType::RecomputeFactorData(Energy::NonSingletonFactor* A)
+ {
+ 	FactorData* D = (FactorData*) A->data;
+-	int i, k, n = A->arity;
++	//int i, k, n = A->arity;
++	int i, k;
+ 	Energy::Edge* e;
+ 
+ 	D->sum_min = 0;
+@@ -144,7 +147,7 @@ void PatternFactorType::RecomputeFactorD
+ 	}
+ }
+ 
+-void PatternFactorType::ComputePartialReparameterization(Energy::NonSingletonFactor* A, double* theta)
++void srmpLib::PatternFactorType::ComputePartialReparameterization(Energy::NonSingletonFactor* A, double* theta)
+ {
+ 	// this function should never be called since incoming edges are not allowed (as specified in PrepareFactor())
+ 	printf("Error: ComputePartialReparameterization() should not be called for this type. (Trying to save non-standard factor?");
+@@ -152,7 +155,7 @@ void PatternFactorType::ComputePartialRe
+ }
+ 
+ 
+-double PatternFactorType::SendMessage(Energy::Edge* e0)
++double srmpLib::PatternFactorType::SendMessage(Energy::Edge* e0)
+ {
+ 	Energy::NonSingletonFactor* A = e0->A;
+ 	FactorData* D = (FactorData*) A->data;
+@@ -201,7 +204,7 @@ double PatternFactorType::SendMessage(En
+ 	}
+ }
+ 
+-void PatternFactorType::SendRestrictedMessage(Energy::Edge* e0)
++void srmpLib::PatternFactorType::SendRestrictedMessage(Energy::Edge* e0)
+ {
+ 	Energy::NonSingletonFactor* A = e0->A;
+ 	FactorData* D = (FactorData*) A->data;
+@@ -242,7 +245,7 @@ void PatternFactorType::SendRestrictedMe
+ }
+ 
+ 
+-double PatternFactorType::SendMPLPMessages(Energy::NonSingletonFactor* A, bool set_solution)
++double srmpLib::PatternFactorType::SendMPLPMessages(Energy::NonSingletonFactor* A, bool set_solution)
+ {
+ 	FactorData* D = (FactorData*) A->data;
+ 	int _i, k, n = A->arity;
+diff -rupN SRMP-v1.01.src-patched_old/PatternType.h SRMP-v1.01.src-patched/PatternType.h
+--- SRMP-v1.01.src-patched_old/PatternType.h	2013-07-04 13:30:48.000000000 +0200
++++ SRMP-v1.01.src-patched/PatternType.h	2014-08-26 14:22:27.588344000 +0200
+@@ -99,10 +99,12 @@ int main(int argc, char* argv[])
+ */
+ 
+ 
+-#ifndef FUAHNGIUAGKAFASJGASG
+-#define FUAHNGIUAGKAFASJGASG
++#ifndef SRMP_FUAHNGIUAGKAFASJGASG
++#define SRMP_FUAHNGIUAGKAFASJGASG
+ 
+-#include "../SRMP.h"
++#include "SRMP.h"
++
++namespace srmpLib {
+ 
+ struct PatternFactorType : Energy::FactorType
+ {
+@@ -150,5 +152,6 @@ private:
+ 	void RecomputeFactorData(Energy::NonSingletonFactor* A);
+ };
+ 
++} // namespace srmpLib
+ 
+ #endif
+diff -rupN SRMP-v1.01.src-patched_old/PottsType.cpp SRMP-v1.01.src-patched/PottsType.cpp
+--- SRMP-v1.01.src-patched_old/PottsType.cpp	2013-07-04 13:30:48.000000000 +0200
++++ SRMP-v1.01.src-patched/PottsType.cpp	2014-08-26 11:39:04.520082000 +0200
+@@ -19,16 +19,16 @@
+ #include <assert.h>
+ #include "PottsType.h"
+ 
+-PottsFactorType::PottsFactorType() 
++srmpLib::PottsFactorType::PottsFactorType()
+ 	: buf(4096)
+ {
+ }
+ 
+-PottsFactorType::~PottsFactorType()
++srmpLib::PottsFactorType::~PottsFactorType()
+ {
+ }
+ 
+-void PottsFactorType::InitFactor(Energy::NonSingletonFactor* A, double* user_data, unsigned flags)
++void srmpLib::PottsFactorType::InitFactor(Energy::NonSingletonFactor* A, double* user_data, unsigned flags)
+ {
+ 	if (A->arity != 2 || A->nodes[0]->K != A->nodes[1]->K || *user_data < 0)
+ 	{
+@@ -39,16 +39,16 @@ void PottsFactorType::InitFactor(Energy:
+ 	*A->data = *user_data;
+ }
+ 
+-double PottsFactorType::GetCost(Energy::NonSingletonFactor* A)
++double srmpLib::PottsFactorType::GetCost(Energy::NonSingletonFactor* A)
+ {
+ 	return (A->nodes[1]->solution == A->nodes[0]->solution) ? 0 : (*A->data);
+ }
+ 
+-void PottsFactorType::InitEdge(Energy::Edge* e)
++void srmpLib::PottsFactorType::InitEdge(Energy::Edge* e)
+ {
+ }
+ 
+-bool PottsFactorType::PrepareFactor(Energy::NonSingletonFactor* A)
++bool srmpLib::PottsFactorType::PrepareFactor(Energy::NonSingletonFactor* A)
+ {
+ 	if (A->first_in) return false; // if there are incoming edges then convert factor to general 'PairwiseType'
+ 	if (!A->first_out || !A->first_out->next_out || A->first_out->next_out->next_out
+@@ -56,7 +56,7 @@ bool PottsFactorType::PrepareFactor(Ener
+ 	return true;
+ }
+ 
+-void PottsFactorType::ComputePartialReparameterization(Energy::NonSingletonFactor* A, double* theta)
++void srmpLib::PottsFactorType::ComputePartialReparameterization(Energy::NonSingletonFactor* A, double* theta)
+ {
+ 	// this function should never be called since incoming edges are not allowed (as specified in PrepareFactor())
+ 	printf("Error: ComputePartialReparameterization() should not be called for this type. (Trying to save non-standard factor?");
+@@ -64,7 +64,7 @@ void PottsFactorType::ComputePartialRepa
+ }
+ 
+ 
+-double PottsFactorType::SendMessage(Energy::Edge* e)
++double srmpLib::PottsFactorType::SendMessage(Energy::Edge* e)
+ {
+ 	Energy::NonSingletonFactor* A = e->A;
+ 	int k, K = e->B->K;
+@@ -93,7 +93,7 @@ double PottsFactorType::SendMessage(Ener
+ 	return delta;
+ }
+ 
+-void PottsFactorType::SendRestrictedMessage(Energy::Edge* e)
++void srmpLib::PottsFactorType::SendRestrictedMessage(Energy::Edge* e)
+ {
+ 	Energy::NonSingletonFactor* A = e->A;
+ 	int K = e->B->K, k_other = ((Energy::Node*)e->B == A->nodes[0]) ? A->nodes[1]->solution : A->nodes[0]->solution;
+@@ -104,7 +104,7 @@ void PottsFactorType::SendRestrictedMess
+ }
+ 
+ 
+-double PottsFactorType::SendMPLPMessages(Energy::NonSingletonFactor* A, bool set_solution)
++double srmpLib::PottsFactorType::SendMPLPMessages(Energy::NonSingletonFactor* A, bool set_solution)
+ {
+ 	int K = A->nodes[0]->K;
+ 	double* rep0 = A->nodes[0]->rep;
+diff -rupN SRMP-v1.01.src-patched_old/PottsType.h SRMP-v1.01.src-patched/PottsType.h
+--- SRMP-v1.01.src-patched_old/PottsType.h	2013-07-04 13:30:48.000000000 +0200
++++ SRMP-v1.01.src-patched/PottsType.h	2014-08-26 14:22:11.532344000 +0200
+@@ -80,10 +80,12 @@ int main(int argc, char* argv[])
+ */
+ 
+ 
+-#ifndef NLAGNKLAJSNFRKAJSGKAS
+-#define NLAGNKLAJSNFRKAJSGKAS
++#ifndef SRMP_NLAGNKLAJSNFRKAJSGKAS
++#define SRMP_NLAGNKLAJSNFRKAJSGKAS
+ 
+-#include "../SRMP.h"
++#include "SRMP.h"
++
++namespace srmpLib {
+ 
+ struct PottsFactorType : Energy::FactorType
+ {
+@@ -110,5 +112,6 @@ private:
+ 	ReusableBuffer rbuf;
+ };
+ 
++} // namespace srmpLib
+ 
+ #endif
+diff -rupN SRMP-v1.01.src-patched_old/SRMP.cpp SRMP-v1.01.src-patched/SRMP.cpp
+--- SRMP-v1.01.src-patched_old/SRMP.cpp	2014-02-20 14:58:46.000000000 +0100
++++ SRMP-v1.01.src-patched/SRMP.cpp	2014-08-27 15:24:12.776119000 +0200
+@@ -21,12 +21,12 @@
+ #include <math.h>
+ #include <assert.h>
+ #include "util.h"
+-#include "../SRMP.h"
++#include "SRMP.h"
+ 
+ 
+ 
+ 
+-double Energy::InitSRMP(Sequence& seq, Options& options)
++double srmpLib::Energy::InitSRMP(Sequence& seq, Options& options)
+ {
+ 	int t;
+ 	Node* i;
+@@ -46,7 +46,7 @@ double Energy::InitSRMP(Sequence& seq, O
+ 		else if (!_A->first_out)
+ 		{
+ 			_A->rep = NULL;
+-			LB_init += SEND_MPLP_MESSAGES(_A, false);
++			LB_init += SRMP_SEND_MPLP_MESSAGES(_A, false);
+ 		}
+ 	}
+ 
+@@ -182,7 +182,7 @@ double Energy::InitSRMP(Sequence& seq, O
+ 
+ 
+ 
+-double Energy::SolveSRMP(Options& options)
++double srmpLib::Energy::SolveSRMP(Options& options)
+ {
+ 	double time_start = get_time();
+ 
+@@ -221,14 +221,14 @@ double Energy::SolveSRMP(Options& option
+ 			B = seq.arr[t].A;
+ 			int b, K = B->K;
+ 			if (B->arity == 1) memcpy(theta, B->data, K*sizeof(double));
+-			else COMPUTE_PARTIAL_REPARAMETERIZATION((NonSingletonFactor*)B, theta);
++			else SRMP_COMPUTE_PARTIAL_REPARAMETERIZATION((NonSingletonFactor*)B, theta);
+ 
+ 			int w_total = B->weight_forward;
+ 			for (e=B->first_in; e; e=e->next_in)
+ 			{
+ 				if (e->is_bw)
+ 				{
+-					SEND_MESSAGE(e);
++				    SRMP_SEND_MESSAGE(e);
+ 				}
+ 				for (b=0; b<K; b++) theta[b] += e->m[b];
+ 			}
+@@ -271,14 +271,14 @@ double Energy::SolveSRMP(Options& option
+ 			int b, K = B->K;
+ 
+ 			if (B->arity == 1) memcpy(theta, B->data, K*sizeof(double));
+-			else COMPUTE_PARTIAL_REPARAMETERIZATION((NonSingletonFactor*)B, theta);
++			else SRMP_COMPUTE_PARTIAL_REPARAMETERIZATION((NonSingletonFactor*)B, theta);
+ 
+ 			int B_weight = B->weight_backward;
+ 			for (e=B->first_in; e; e=e->next_in)
+ 			{
+ 				if (e->is_fw || e->compute_bound)
+ 				{
+-					v = SEND_MESSAGE(e);
++					v = SRMP_SEND_MESSAGE(e);
+ 					if (e->compute_bound) LB += v;
+ 				}
+ 				for (b=0; b<K; b++) theta[b] += e->m[b]; 
+@@ -326,7 +326,7 @@ double Energy::SolveSRMP(Options& option
+ 			else                 printf("lower bound=%f\n", LB);
+ 		}
+ 
+-#ifdef VNK_DEBUG
++#ifdef SRMP_VNK_DEBUG
+ 		double LB_check = ComputeLowerBound();
+ 		assert (fabs(LB - LB_check) < 1e-5);
+ #endif
+@@ -345,7 +345,7 @@ double Energy::SolveSRMP(Options& option
+ 
+ 
+ 
+-double Energy::Solve(Options& options)
++double srmpLib::Energy::Solve(Options& options)
+ {
+ 	if (dual_graph) return SolveDualGraph(options);
+ 
+@@ -388,9 +388,9 @@ double Energy::Solve(Options& options)
+ 
+ 	if (options.iter_max == 0)
+ 	{
++	    LB = ComputeLowerBound();
+ 		if (options.verbose)
+ 		{
+-			LB = ComputeLowerBound();
+ 			printf("lower_bound=%f\n", LB);
+ 		}
+ 		return LB;
+diff -rupN SRMP-v1.01.src-patched_old/SRMP.h SRMP-v1.01.src-patched/SRMP.h
+--- SRMP-v1.01.src-patched_old/SRMP.h	2014-01-10 13:46:52.000000000 +0100
++++ SRMP-v1.01.src-patched/SRMP.h	2014-08-29 12:00:59.569202000 +0200
+@@ -26,21 +26,23 @@
+    Hopefully, the usage should be self-explanatory. For concrete examples see FactorTypes/PottsType.h and FactorTypes/SharedPairwiseType.h.
+ */
+ 
+-#ifndef FNAIJDGAKSJDBAJFGBASFJAS
+-#define FNAIJDGAKSJDBAJFGBASFJAS
++#ifndef SRMP_FNAIJDGAKSJDBAJFGBASFJAS
++#define SRMP_FNAIJDGAKSJDBAJFGBASFJAS
+ 
+ #include <string.h>
+ #include <assert.h>
+-#include "Algs/block.h"
+-#include "Algs/timer.h"
++#include "block.h"
++#include "timer.h"
+ 
+-//#define VNK_DEBUG
++namespace srmpLib {
++
++//#define SRMP_VNK_DEBUG
+ 
+ 
+ // flags for Energy::AddFactor(...)
+ const unsigned FLAG_DO_NOT_COPY_INTO_INTERNAL_MEMORY = 0x0001; // used for PairwiseFactorType, GeneralFactorType and PatternFactorType
+ 
+-#define ENERGY_INFTY (1e100)
++#define SRMP_ENERGY_INFTY (1e100)
+ 
+ class Energy
+ {
+@@ -126,7 +128,7 @@ public:
+ 	};
+ 
+ 	double Solve(Options& options);
+-	int GetSolution(NodeId i) { return nodes[i].solution_best; } // can be called after Solve()
++	int GetSolution(NodeId i) const { return nodes[i].solution_best; } // can be called after Solve()
+ 
+ 
+ 	/////////////////////////////////////////////////////////////////////////
+@@ -260,11 +262,16 @@ public:
+ 	};
+ 	struct FactorType
+ 	{
+-// if TEST_FACTOR_TYPES is defined then outputs of ComputePartialRepameterization(), SendMessage(), SendRestrictedMessage(), SendMPLPMessages()
++// if SRMP_TEST_FACTOR_TYPES is defined then outputs of ComputePartialRepameterization(), SendMessage(), SendRestrictedMessage(), SendMPLPMessages()
+ // will be compared against true outputs (where costs are obtained via GetCost()). 
+ // Exception: the set_solution option in SendMPLPMessages() is not tested.
+ //
+-//#define TEST_FACTOR_TYPES 
++//#define SRMP_TEST_FACTOR_TYPES
++
++	    // virtual destructor
++	    virtual ~FactorType() {
++
++	    }
+ 
+ 		// called whenever a new factor is added
+ 		virtual void InitFactor(NonSingletonFactor* A, double* user_data, unsigned flags) = 0;
+@@ -451,14 +458,14 @@ public:
+ 	void PrintEdge(Edge* e) { PrintFactor(e->A); printf("->"); PrintFactor(e->B); }
+ 	void Print();
+ 
+-#ifdef TEST_FACTOR_TYPES 
++#ifdef SRMP_TEST_FACTOR_TYPES
+ 	void   TestComputePartialReparameterization(NonSingletonFactor* A, double* theta);
+ 	double TestSendMessage(Edge* e);
+ 	void   TestSendRestrictedMessage(Edge* e);
+ 	double TestSendMPLPMessages(NonSingletonFactor* A, bool set_solution=false);
+ #endif
+ 
+-#ifdef VNK_DEBUG
++#ifdef SRMP_VNK_DEBUG
+ 	void AddRandomEdges(double prob);
+ 	FactorId GetFactorId(int arity, NodeId* node_indexes); // returns the first such factor (or NULL, if such factor doesn't exist)
+ #endif
+@@ -522,21 +529,23 @@ inline int Energy::CompareFactorsX(Facto
+ 
+ 
+ 
+-#ifdef TEST_FACTOR_TYPES
++#ifdef SRMP_TEST_FACTOR_TYPES
+ 
+-#define COMPUTE_PARTIAL_REPARAMETERIZATION(A, theta) TestComputePartialReparameterization(A, theta) 
+-#define SEND_MESSAGE(e)                              TestSendMessage(e)
+-#define SEND_RESTRICTED_MESSAGE(e)                   TestSendRestrictedMessage(e)
+-#define SEND_MPLP_MESSAGES(A, set_solution)          TestSendMPLPMessages(A, set_solution)
++#define SRMP_COMPUTE_PARTIAL_REPARAMETERIZATION(A, theta) TestComputePartialReparameterization(A, theta)
++#define SRMP_SEND_MESSAGE(e)                              TestSendMessage(e)
++#define SRMP_SEND_RESTRICTED_MESSAGE(e)                   TestSendRestrictedMessage(e)
++#define SRMP_SEND_MPLP_MESSAGES(A, set_solution)          TestSendMPLPMessages(A, set_solution)
+ 
+ #else
+ 
+-#define COMPUTE_PARTIAL_REPARAMETERIZATION(A, theta) (A)->type->ComputePartialReparameterization(A, theta) 
+-#define SEND_MESSAGE(e)                              (e)->A->type->SendMessage(e)
+-#define SEND_RESTRICTED_MESSAGE(e)                   (e)->A->type->SendRestrictedMessage(e)
+-#define SEND_MPLP_MESSAGES(A, set_solution)          (A)->type->SendMPLPMessages(A, set_solution)
++#define SRMP_COMPUTE_PARTIAL_REPARAMETERIZATION(A, theta) (A)->type->ComputePartialReparameterization(A, theta)
++#define SRMP_SEND_MESSAGE(e)                              (e)->A->type->SendMessage(e)
++#define SRMP_SEND_RESTRICTED_MESSAGE(e)                   (e)->A->type->SendRestrictedMessage(e)
++#define SRMP_SEND_MPLP_MESSAGES(A, set_solution)          (A)->type->SendMPLPMessages(A, set_solution)
+ 
+ #endif
+ 
++} // namespace srmpLib
++
+ #endif
+ 
+diff -rupN SRMP-v1.01.src-patched_old/SharedPairwiseType.cpp SRMP-v1.01.src-patched/SharedPairwiseType.cpp
+--- SRMP-v1.01.src-patched_old/SharedPairwiseType.cpp	2013-07-04 13:30:48.000000000 +0200
++++ SRMP-v1.01.src-patched/SharedPairwiseType.cpp	2014-08-26 11:39:49.572083000 +0200
+@@ -19,7 +19,7 @@
+ #include <assert.h>
+ #include "SharedPairwiseType.h"
+ 
+-SharedPairwiseFactorType::SharedPairwiseFactorType(int _K1, int _K2, double* _costs) 
++srmpLib::SharedPairwiseFactorType::SharedPairwiseFactorType(int _K1, int _K2, double* _costs)
+ 	: K1(_K1), K2(_K2),
+ 	  buf(4096)
+ {
+@@ -27,12 +27,12 @@ SharedPairwiseFactorType::SharedPairwise
+ 	memcpy(costs, _costs, K1*K2*sizeof(double));
+ }
+ 
+-SharedPairwiseFactorType::~SharedPairwiseFactorType()
++srmpLib::SharedPairwiseFactorType::~SharedPairwiseFactorType()
+ {
+ 	delete [] costs;
+ }
+ 
+-void SharedPairwiseFactorType::InitFactor(Energy::NonSingletonFactor* A, double* user_data)
++void srmpLib::SharedPairwiseFactorType::InitFactor(Energy::NonSingletonFactor* A, double* user_data)
+ {
+ 	if (A->arity != 2 || A->nodes[0]->K != K1 || A->nodes[1]->K != K2 || *user_data <= 0)
+ 	{
+@@ -43,12 +43,12 @@ void SharedPairwiseFactorType::InitFacto
+ 	*A->data = *user_data;
+ }
+ 
+-double SharedPairwiseFactorType::GetCost(Energy::NonSingletonFactor* A)
++double srmpLib::SharedPairwiseFactorType::GetCost(Energy::NonSingletonFactor* A)
+ {
+ 	return (*A->data) * costs[A->nodes[1]->solution + A->nodes[1]->K*A->nodes[0]->solution];
+ }
+ 
+-void SharedPairwiseFactorType::InitEdge(Energy::Edge* e)
++void srmpLib::SharedPairwiseFactorType::InitEdge(Energy::Edge* e)
+ {
+ 	Energy::NonSingletonFactor* A = e->A;
+ 
+@@ -56,12 +56,12 @@ void SharedPairwiseFactorType::InitEdge(
+ 		|| (!A->first_out->next_out->next_out && A->first_out->B != A->first_out->next_out->B) ); // two outgoing edges to different nodes
+ }
+ 
+-bool SharedPairwiseFactorType::PrepareFactor(Energy::NonSingletonFactor* A)
++bool srmpLib::SharedPairwiseFactorType::PrepareFactor(Energy::NonSingletonFactor* A)
+ {
+ 	return true;
+ }
+ 
+-void SharedPairwiseFactorType::ComputePartialReparameterization(Energy::NonSingletonFactor* A, double* theta)
++void srmpLib::SharedPairwiseFactorType::ComputePartialReparameterization(Energy::NonSingletonFactor* A, double* theta)
+ {
+ 	Energy::Edge* e;
+ 	int x, y, X = A->nodes[0]->K, Y = A->nodes[1]->K;
+@@ -91,7 +91,7 @@ void SharedPairwiseFactorType::ComputePa
+ }
+ 
+ 
+-double SharedPairwiseFactorType::SendMessage(Energy::Edge* e)
++double srmpLib::SharedPairwiseFactorType::SendMessage(Energy::Edge* e)
+ {
+ 	Energy::NonSingletonFactor* A = e->A;
+ 	Energy::Edge* e2;
+@@ -179,7 +179,7 @@ double SharedPairwiseFactorType::SendMes
+ 	return delta;
+ }
+ 
+-void SharedPairwiseFactorType::SendRestrictedMessage(Energy::Edge* e)
++void srmpLib::SharedPairwiseFactorType::SendRestrictedMessage(Energy::Edge* e)
+ {
+ 	Energy::NonSingletonFactor* A = e->A;
+ 	Energy::Edge* e2;
+@@ -222,7 +222,7 @@ void SharedPairwiseFactorType::SendRestr
+ 
+ 
+ 
+-double SharedPairwiseFactorType::SendMPLPMessages(Energy::NonSingletonFactor* A, bool set_solution)
++double srmpLib::SharedPairwiseFactorType::SendMPLPMessages(Energy::NonSingletonFactor* A, bool set_solution)
+ {
+ 	printf("SharedPairwiseFactorType::SendMPLPMessages() is not implemented\n");
+ 	exit(1);
+diff -rupN SRMP-v1.01.src-patched_old/SharedPairwiseType.h SRMP-v1.01.src-patched/SharedPairwiseType.h
+--- SRMP-v1.01.src-patched_old/SharedPairwiseType.h	2013-07-04 13:30:48.000000000 +0200
++++ SRMP-v1.01.src-patched/SharedPairwiseType.h	2014-08-26 14:21:48.036343000 +0200
+@@ -85,10 +85,12 @@ int main(int argc, char* argv[])
+ 
+ */
+ 
+-#ifndef KAJSFKJAFKJASGAKJSFAAGARARAGS
+-#define KAJSFKJAFKJASGAKJSFAAGARARAGS
++#ifndef SRMP_KAJSFKJAFKJASGAKJSFAAGARARAGS
++#define SRMP_KAJSFKJAFKJASGAKJSFAAGARARAGS
+ 
+-#include "../SRMP.h"
++#include "SRMP.h"
++
++namespace srmpLib {
+ 
+ struct SharedPairwiseFactorType : Energy::FactorType
+ {
+@@ -118,5 +120,6 @@ private:
+ 	ReusableBuffer rbuf2;
+ };
+ 
++} // namespace srmpLib
+ 
+ #endif
+diff -rupN SRMP-v1.01.src-patched_old/block.h SRMP-v1.01.src-patched/block.h
+--- SRMP-v1.01.src-patched_old/block.h	2013-07-04 13:30:48.000000000 +0200
++++ SRMP-v1.01.src-patched/block.h	2014-08-26 14:23:44.628346000 +0200
+@@ -89,8 +89,8 @@
+ 	deallocated only when the destructor is called.
+ */
+ 
+-#ifndef __BLOCK_H__
+-#define __BLOCK_H__
++#ifndef SRMP___BLOCK_H__
++#define SRMP___BLOCK_H__
+ 
+ #include <stdlib.h>
+ 
+@@ -98,6 +98,8 @@
+ /***********************************************************************/
+ /***********************************************************************/
+ 
++namespace srmpLib {
++
+ template <class Type> class Block
+ {
+ public:
+@@ -326,8 +328,8 @@ public:
+ 	}
+ 
+ private:
++    int size_max;
+ 	char* buf;
+-	int size_max;
+ 
+ 	void	(*error_function)(const char *);
+ };
+@@ -385,5 +387,6 @@ private:
+ 	void	(*error_function)(const char *);
+ };
+ 
++} // namespace srmpLib
+ #endif
+ 
+diff -rupN SRMP-v1.01.src-patched_old/debug.cpp SRMP-v1.01.src-patched/debug.cpp
+--- SRMP-v1.01.src-patched_old/debug.cpp	2014-01-10 13:48:54.000000000 +0100
++++ SRMP-v1.01.src-patched/debug.cpp	2014-08-26 14:08:23.704322000 +0200
+@@ -21,12 +21,12 @@
+ #include <math.h>
+ #include <assert.h>
+ #include "util.h"
+-#include "../SRMP.h"
+-#include "../FactorTypes/GeneralType.h"
++#include "SRMP.h"
++#include "GeneralType.h"
+ 
+ 
+ 
+-void Energy::Print()
++void srmpLib::Energy::Print()
+ {
+ 	Node* i;
+ 	NonSingletonFactor* A;
+@@ -57,9 +57,9 @@ void Energy::Print()
+ }
+ 
+ 
+-#ifdef TEST_FACTOR_TYPES 
++#ifdef SRMP_TEST_FACTOR_TYPES
+ 
+-void Energy::TestComputePartialReparameterization(NonSingletonFactor* A, double* theta)
++void srmpLib::Energy::TestComputePartialReparameterization(NonSingletonFactor* A, double* theta)
+ {
+ 	A->type->ComputePartialReparameterization(A, theta);
+ 
+@@ -110,9 +110,9 @@ void Energy::TestComputePartialReparamet
+ 	delete [] _buf;
+ }
+ 
+-double Energy::TestSendMessage(Edge* e)
++double srmpLib::Energy::TestSendMessage(Edge* e)
+ {
+-	NonSingletonFactor* A = e->A;
++    NonSingletonFactor* A = e->A;
+ 	double delta = A->type->SendMessage(e);
+ 
+ 	if (A->type == factor_type_general) return delta;
+@@ -171,9 +171,9 @@ double Energy::TestSendMessage(Edge* e)
+ 	return delta;
+ }
+ 
+-void Energy::TestSendRestrictedMessage(Edge* e)
++void srmpLib::Energy::TestSendRestrictedMessage(Edge* e)
+ {
+-	NonSingletonFactor* A = e->A;
++    NonSingletonFactor* A = e->A;
+ 	A->type->SendRestrictedMessage(e);
+ 
+ 	if (A->type == factor_type_general) return;
+@@ -228,7 +228,7 @@ void Energy::TestSendRestrictedMessage(E
+ 	delete [] _buf;
+ }
+ 
+-double Energy::TestSendMPLPMessages(NonSingletonFactor* A, bool set_solution)
++double srmpLib::Energy::TestSendMPLPMessages(NonSingletonFactor* A, bool set_solution)
+ {
+ 	if (A->type == factor_type_general) return A->type->SendMPLPMessages(A, set_solution);
+ 
+@@ -331,8 +331,8 @@ double Energy::TestSendMPLPMessages(NonS
+ 
+ 
+ 
+-#ifdef VNK_DEBUG
+-void Energy::AddRandomEdges(double prob)
++#ifdef SRMP_VNK_DEBUG
++void srmpLib::Energy::AddRandomEdges(double prob)
+ {
+ 	NonSingletonFactor* A;
+ 	Node* i;
+@@ -372,7 +372,7 @@ void Energy::AddRandomEdges(double prob)
+ //	}
+ }
+ 
+-Energy::FactorId Energy::GetFactorId(int arity, NodeId* node_indexes)
++srmpLib::Energy::FactorId srmpLib::Energy::GetFactorId(int arity, NodeId* node_indexes)
+ {
+ 	if (arity == 1)
+ 	{
+@@ -635,4 +635,4 @@ int main()
+ 
+ 	return 0;
+ }
+-*/
+\ No newline at end of file
++*/
+diff -rupN SRMP-v1.01.src-patched_old/energy.cpp SRMP-v1.01.src-patched/energy.cpp
+--- SRMP-v1.01.src-patched_old/energy.cpp	2014-01-10 11:15:00.000000000 +0100
++++ SRMP-v1.01.src-patched/energy.cpp	2014-08-26 13:47:29.008288000 +0200
+@@ -21,21 +21,21 @@
+ #include <math.h>
+ #include <assert.h>
+ #include "util.h"
+-#include "../SRMP.h"
+-#include "../FactorTypes/PairwiseType.h"
+-#include "../FactorTypes/GeneralType.h"
++#include "SRMP.h"
++#include "PairwiseType.h"
++#include "GeneralType.h"
+ 
+ 
+-Energy::Energy(int _node_num_max)
++srmpLib::Energy::Energy(int _node_num_max)
+ 	: node_num(0), node_num_max(_node_num_max), arity_max(1),
+ 	  factors(512), edges(NULL), buf(4096), is_solution_best_initialized(false), is_cost_best_valid(false),
+-	  factor_type_pairwise(NULL), factor_type_general(NULL), 
+-	  primal_graph(NULL), factor_type_pairwise_dual(NULL), dual_graph(NULL), dual_sequence(NULL)
++	  factor_type_general(NULL), factor_type_pairwise(NULL),
++	  factor_type_pairwise_dual(NULL), primal_graph(NULL), dual_graph(NULL), dual_sequence(NULL)
+ {
+ 	nodes = new Node[node_num_max];
+ }
+ 
+-Energy::~Energy()
++srmpLib::Energy::~Energy()
+ {
+ 	delete [] nodes;
+ 	if (edges) delete edges;
+@@ -47,7 +47,7 @@ Energy::~Energy()
+ 	if (dual_sequence) delete dual_sequence;
+ }
+ 
+-Energy::NodeId Energy::AddNode(int K, double* costs)
++srmpLib::Energy::NodeId srmpLib::Energy::AddNode(int K, double* costs)
+ {
+ 	Node* i = nodes + node_num;
+ 	i->arity = 1;
+@@ -63,7 +63,7 @@ Energy::NodeId Energy::AddNode(int K, do
+ 	return node_num ++;
+ }
+ 
+-Energy::FactorId Energy::AddUnaryFactor(NodeId _i, double* costs)
++srmpLib::Energy::FactorId srmpLib::Energy::AddUnaryFactor(NodeId _i, double* costs)
+ {
+ 	int k;
+ 	Node* i = nodes + _i;
+@@ -74,13 +74,13 @@ Energy::FactorId Energy::AddUnaryFactor(
+ 	return i;
+ }
+ 
+-Energy::FactorId Energy::AddPairwiseFactor(NodeId _i, NodeId _j, double* costs)
++srmpLib::Energy::FactorId srmpLib::Energy::AddPairwiseFactor(NodeId _i, NodeId _j, double* costs)
+ {
+ 	NodeId node_indexes[2] = { _i, _j };
+ 	return AddFactor(2, node_indexes, costs);
+ }
+ 
+-Energy::FactorId Energy::AddFactor(int arity, NodeId* node_indexes, double* costs, FactorType* type, unsigned flags)
++srmpLib::Energy::FactorId srmpLib::Energy::AddFactor(int arity, NodeId* node_indexes, double* costs, FactorType* type, unsigned flags)
+ {
+ 	if (arity == 1) return AddUnaryFactor(node_indexes[0], costs);
+ 
+@@ -117,7 +117,7 @@ Energy::FactorId Energy::AddFactor(int a
+ 
+ 
+ 
+-void Energy::InitFactor(NonSingletonFactor* A, double* user_data, FactorType* type, unsigned flags)
++void srmpLib::Energy::InitFactor(NonSingletonFactor* A, double* user_data, FactorType* type, unsigned flags)
+ {
+ 	if (type) A->type = type;
+ 	else
+@@ -143,7 +143,7 @@ void Energy::InitFactor(NonSingletonFact
+ }
+ 
+ 
+-void Energy::GetFactorCosts(NonSingletonFactor* A, double* costs, void* _buf)
++void srmpLib::Energy::GetFactorCosts(NonSingletonFactor* A, double* costs, void* _buf)
+ {
+ 	int i, n = A->arity;
+ 	Node** Anodes = A->nodes;
+@@ -174,7 +174,7 @@ void Energy::GetFactorCosts(NonSingleton
+ 	}
+ }
+ 
+-void Energy::ConvertFactorToGeneral(NonSingletonFactor* A, void* _buf)
++void srmpLib::Energy::ConvertFactorToGeneral(NonSingletonFactor* A, void* _buf)
+ {
+ 	double* costs = (double*) _buf;
+ 	GetFactorCosts(A, costs, (void*)(costs + A->K));
+@@ -192,7 +192,7 @@ void Energy::ConvertFactorToGeneral(NonS
+ }
+ 
+ 
+-void Energy::InitEdges()
++void srmpLib::Energy::InitEdges()
+ {
+ 	NonSingletonFactor* A;
+ 	Edge* e;
+@@ -240,7 +240,7 @@ void Energy::InitEdges()
+ 	}
+ }
+ 
+-double Energy::ComputeCost()
++double srmpLib::Energy::ComputeCost()
+ {
+ 	double cost = 0;
+ 	Node* i;
+@@ -261,7 +261,7 @@ double Energy::ComputeCost()
+ 		cost_best = cost;
+ 		for (i=nodes; i<nodes+node_num; i++) i->solution_best = i->solution;
+ 	}
+-	if (primal_graph && cost >= ENERGY_INFTY/2) // we are in the dual energy; the solution is inconsistent!
++	if (primal_graph && cost >= SRMP_ENERGY_INFTY/2) // we are in the dual energy; the solution is inconsistent!
+ 	{
+ 		cost = primal_graph->ConvertSolutionDualToPrimal();
+ 		primal_graph->dual_solution_was_inconsistent = true;
+@@ -269,7 +269,7 @@ double Energy::ComputeCost()
+ 	return cost;
+ }
+ 
+-void Energy::AddTriplet(NodeId _i, NodeId _j, NodeId _k, bool add_all_edges)
++void srmpLib::Energy::AddTriplet(NodeId _i, NodeId _j, NodeId _k, bool add_all_edges)
+ {
+ 	if (_i<0 || _j<0 || _k<0 || _i>=node_num || _j>=node_num || _k>=node_num || _i==_j || _i==_k || _j==_k)
+ 	{
+@@ -319,7 +319,7 @@ void Energy::AddTriplet(NodeId _i, NodeI
+ 
+ 
+ 
+-void Energy::ComputeSolution(Factor* B, void* _buf)
++void srmpLib::Energy::ComputeSolution(Factor* B, void* _buf)
+ {
+ 	int i, b, K = B->K;
+ 	Edge* e;
+@@ -337,7 +337,7 @@ void Energy::ComputeSolution(Factor* B,
+ 	if (exists_unlabeled)
+ 	{
+ 		if (B->arity == 1) memcpy(theta, B->data, K*sizeof(double));
+-		else COMPUTE_PARTIAL_REPARAMETERIZATION((NonSingletonFactor*)B, theta);
++		else SRMP_COMPUTE_PARTIAL_REPARAMETERIZATION((NonSingletonFactor*)B, theta);
+ 
+ 		for (e=B->first_in; e; e=e->next_in)
+ 		{
+@@ -347,7 +347,7 @@ void Energy::ComputeSolution(Factor* B,
+ 			{
+ 				double* m_old = e->m;
+ 				e->m = m;
+-				SEND_RESTRICTED_MESSAGE(e);
++				SRMP_SEND_RESTRICTED_MESSAGE(e);
+ 				e->m = m_old;
+ 				for (b=0; b<K; b++) theta[b] += m[b];
+ 			}
+@@ -371,7 +371,7 @@ void Energy::ComputeSolution(Factor* B,
+ }
+ 
+ 
+-void Energy::NonSingletonFactor::ComputeRestrictedMinimum(double* theta, int* _buf)
++void srmpLib::Energy::NonSingletonFactor::ComputeRestrictedMinimum(double* theta, int* _buf)
+ {
+ 	int i, k = 0, n = 0;
+ 	int* Kfactor_array = _buf;
+@@ -434,14 +434,16 @@ void Energy::NonSingletonFactor::Compute
+ 	}
+ }
+ 
+-void Energy::NonSingletonFactor::ComputeRestrictedMinimum(double* theta, Factor* B, double* thetaB, int* _buf)
++void srmpLib::Energy::NonSingletonFactor::ComputeRestrictedMinimum(double* theta, Factor* B, double* thetaB, int* _buf)
+ {
+ 	int i, k = 0, n = 0;
+ 	int* Kfactor_array = _buf;
+ 	int* K_array = _buf + arity;
+ 	int* labeling = _buf + 2*arity;
+ 
+-	int kB = 0, nB = 0;
++	//int kB = 0, nB = 0;
++	int kB = 0;
++
+ 	int* KBfactor_array = _buf + 3*arity;
+ 	Node** Bnodes = (B->arity == 1) ? (Node**)(&B) : ((NonSingletonFactor*)B)->nodes;
+ 
+@@ -494,7 +496,7 @@ void Energy::NonSingletonFactor::Compute
+ }
+ 
+ 
+-double Energy::ComputeLowerBound()
++double srmpLib::Energy::ComputeLowerBound()
+ {
+ 	Node* i;
+ 	NonSingletonFactor* A;
+@@ -527,7 +529,7 @@ double Energy::ComputeLowerBound()
+ 		{
+ 			double* Arep_old = A->rep;
+ 			A->rep = NULL;
+-			LB += SEND_MPLP_MESSAGES(A, false);
++			LB += SRMP_SEND_MPLP_MESSAGES(A, false);
+ 			A->rep = Arep_old;
+ 			continue;
+ 		}
+@@ -536,7 +538,7 @@ double Energy::ComputeLowerBound()
+ 		double* m_old = e->m;
+ 		double* m_new = e->m = (double*) theta_rbuf.Alloc(e->B->K*sizeof(double));
+ 		memcpy(m_new, m_old, e->B->K*sizeof(double));
+-		LB += SEND_MESSAGE(e);
++		LB += SRMP_SEND_MESSAGE(e);
+ 		e->m = m_old;
+ 		double v_min = -m_old[0] + m_new[0];
+ 		for (b=1; b<e->B->K; b++)
+@@ -551,7 +553,7 @@ double Energy::ComputeLowerBound()
+ 	return LB;
+ }
+ 
+-void Energy::PrintStats()
++void srmpLib::Energy::PrintStats()
+ {
+ 	NonSingletonFactor* A;
+ 	Edge* e;
+@@ -587,7 +589,7 @@ void Energy::PrintStats()
+ #pragma warning(disable: 4996) /* Disable deprecation */
+ #endif
+ 
+-void Energy::SaveUAI(char* filename, bool sort_factors, bool save_reparameterization)
++void srmpLib::Energy::SaveUAI(char* filename, bool sort_factors, bool save_reparameterization)
+ {
+ 	Node* i;
+ 	Factor* A;
+@@ -670,7 +672,7 @@ void Energy::SaveUAI(char* filename, boo
+ 			if (A->arity == 1) memcpy(costs, A->data, A->K*sizeof(double));
+ 			else
+ 			{
+-				COMPUTE_PARTIAL_REPARAMETERIZATION((NonSingletonFactor*)A, costs);
++			    SRMP_COMPUTE_PARTIAL_REPARAMETERIZATION((NonSingletonFactor*)A, costs);
+ 			}
+ 
+ 			Edge* e;
+diff -rupN SRMP-v1.01.src-patched_old/example.cpp SRMP-v1.01.src-patched/example.cpp
+--- SRMP-v1.01.src-patched_old/example.cpp	2014-01-10 13:48:24.000000000 +0100
++++ SRMP-v1.01.src-patched/example.cpp	2014-08-26 13:41:03.320278000 +0200
+@@ -21,14 +21,14 @@
+ #include <ctype.h>
+ #include <math.h>
+ #include "SRMP.h"
+-#include "FactorTypes/PottsType.h"
++#include "PottsType.h"
+ 
+ #ifdef _MSC_VER
+ #pragma warning(disable: 4996) /* Disable deprecation */
+ #endif
+ 
+ 
+-PottsFactorType* potts = NULL;
++srmpLib::PottsFactorType* potts = NULL;
+ 
+ bool TAKE_LOG = false;
+ 
+@@ -171,12 +171,12 @@ template <typename REAL> inline int Read
+ ///////////////////////////////////////////////////////////////////
+ ///////////////////////////////////////////////////////////////////
+ 
+-Energy* ReadUAI(const char* filename)
++srmpLib::Energy* ReadUAI(const char* filename)
+ {
+ 	ReadLinesFromFile F(filename);
+ 	if (!F.exists()) { printf("Can't open %s\n", filename); exit(1); }
+ 
+-	Energy* g = NULL;
++	srmpLib::Energy* g = NULL;
+ 	int phase = 0; // 0: reading # nodes
+ 	               // 1: reading # states
+ 	               // 2: reading # terms
+@@ -190,7 +190,7 @@ Energy* ReadUAI(const char* filename)
+ 		int* nodes;
+ 	};
+ 	Term* terms = NULL;
+-	Buffer buf(1024);
++	srmpLib::Buffer buf(1024);
+ 
+ 	ReadNumbers<int> read_ints;
+ 	ReadNumbers<double> read_doubles;
+@@ -206,7 +206,7 @@ Energy* ReadUAI(const char* filename)
+ 			if (num != 1) { printf("Error in line %d: # nodes expected\n", F.CurrentLine()); exit(1); }
+ 			node_num = read_ints.GetNumber(0);
+ 			if (node_num < 1) { printf("Error in line %d: # of nodes should be positive\n", F.CurrentLine()); exit(1); }
+-			g = new Energy(node_num);
++			g = new srmpLib::Energy(node_num);
+ 			phase ++;
+ 		}
+ 		else if (phase == 1)
+@@ -259,7 +259,7 @@ Energy* ReadUAI(const char* filename)
+ 				{ printf("Error in line %d: not a potts term\n", F.CurrentLine()); exit(1); }
+ 				if ( 1 )
+ 				{
+-					if (!potts) potts = new PottsFactorType;
++					if (!potts) potts = new srmpLib::PottsFactorType;
+ 					g->AddFactor(2, terms[t].nodes, arr, potts);
+ 				}
+ 				else
+@@ -297,7 +297,7 @@ Energy* ReadUAI(const char* filename)
+ }
+ 
+ 
+-void AddTriplets(Energy* g, const char* filename)
++void AddTriplets(srmpLib::Energy* g, const char* filename)
+ {
+ 	ReadLinesFromFile F(filename);
+ 	if (!F.exists()) { printf("Can't open %s\n", filename); exit(1); }
+@@ -408,7 +408,7 @@ struct Run
+ 	Run() { tighten_filename = NULL; }
+ 	~Run() {}
+ 
+-	Energy::Options options;
++	srmpLib::Energy::Options options;
+ 	char* tighten_filename;
+ };
+ 
+@@ -416,12 +416,12 @@ int main(int argc, char* argv[])
+ {
+ 	if (0)
+ 	{
+-		Energy* g = ReadUAI("../grid4x4.UAI.LG");
++		srmpLib::Energy* g = ReadUAI("../grid4x4.UAI.LG");
+ 		
+ 		g->SetFullEdges(1);
+ 		
+-		Energy::Options options;
+-		options.method = Energy::Options::MPLP;
++		srmpLib::Energy::Options options;
++		options.method = srmpLib::Energy::Options::MPLP;
+ 		options.iter_max = 100;
+ 		g->Solve(options);
+ 		exit(1);
+@@ -441,7 +441,7 @@ int main(int argc, char* argv[])
+ 	
+ 	Run* current = new Run;
+ 
+-	Block<Run*> run_list(10);
++	srmpLib::Block<Run*> run_list(10);
+ 	Run** run_ptr = run_list.New();
+ 	*run_ptr = current;
+ 
+@@ -499,17 +499,17 @@ int main(int argc, char* argv[])
+ 		}
+ 		if (!strcmp("SRMP", &argv[i][1]))
+ 		{
+-			current->options.method = Energy::Options::SRMP;
++			current->options.method = srmpLib::Energy::Options::SRMP;
+ 			continue;
+ 		}
+ 		if (!strcmp("CMP", &argv[i][1]))
+ 		{
+-			current->options.method = Energy::Options::CMP;
++			current->options.method = srmpLib::Energy::Options::CMP;
+ 			continue;
+ 		}
+ 		if (!strcmp("MPLP", &argv[i][1]))
+ 		{
+-			current->options.method = Energy::Options::MPLP;
++			current->options.method = srmpLib::Energy::Options::MPLP;
+ 			continue;
+ 		}
+ 		if (!strncmp("TRWS=", &argv[i][1], 5))
+@@ -570,7 +570,7 @@ int main(int argc, char* argv[])
+ 	if (!filename) ShowUsage(argv[0]);
+ 
+ 	bool start = true;
+-	Energy* g = ReadUAI(filename);
++	srmpLib::Energy* g = ReadUAI(filename);
+ 
+ 	if (BLP_relaxation) g->SetMinimalEdges();
+ 	if (FULL_relaxation) g->SetFullEdges(FULL_relaxation_flag);
+diff -rupN SRMP-v1.01.src-patched_old/order.cpp SRMP-v1.01.src-patched/order.cpp
+--- SRMP-v1.01.src-patched_old/order.cpp	2014-01-10 11:15:00.000000000 +0100
++++ SRMP-v1.01.src-patched/order.cpp	2014-08-26 13:48:19.144289000 +0200
+@@ -21,10 +21,10 @@
+ #include <math.h>
+ #include <assert.h>
+ #include "util.h"
+-#include "../SRMP.h"
++#include "SRMP.h"
+ #include "PQ.h"
+ 
+-int Energy::ScoreNodeOrdering()
++int srmpLib::Energy::ScoreNodeOrdering()
+ {
+ 	NonSingletonFactor* A;
+ 	int score = 0;
+@@ -46,11 +46,11 @@ int Energy::ScoreNodeOrdering()
+ 
+ struct FactorListItem
+ {
+-	Energy::NonSingletonFactor* A;
++    srmpLib::Energy::NonSingletonFactor* A;
+ 	FactorListItem* next;
+ };
+ 
+-Energy::Node* Energy::_GenerateNodeOrdering(Node* seed)
++srmpLib::Energy::Node* srmpLib::Energy::_GenerateNodeOrdering(Node* seed)
+ {
+ 	int i, k, assigned_num = 0, counter = 0;
+ 	PriorityQueue<double> pq;
+@@ -83,7 +83,7 @@ Energy::Node* Energy::_GenerateNodeOrder
+ 			pq.Add(&items[counter]);
+ 			continue;
+ 		}
+-		pq.Remove(t, pq_buf);
++		pq.SRMP_Remove(t, pq_buf);
+ 		t->slack = 1;
+ 		Node* p = nodes + (int)(t - items);
+ 		//printf("%d ", (int)(t-items));
+@@ -128,7 +128,7 @@ void generate_permutation(int *buf, int
+ 	}
+ }
+ 
+-void Energy::GenerateNodeOrdering(Options& options)
++void srmpLib::Energy::GenerateNodeOrdering(Options& options)
+ {
+ 	if (node_num == 0) return;
+ 
+@@ -196,7 +196,7 @@ void Energy::GenerateNodeOrdering(Option
+ 	delete [] order_best;
+ }
+ 
+-void Energy::SortSequence(Sequence& seq, Options& options)
++void srmpLib::Energy::SortSequence(Sequence& seq, Options& options)
+ {
+ 	if (options.sort_flag < 0) return;
+ 	if (options.sort_flag == 0)
+diff -rupN SRMP-v1.01.src-patched_old/timer.h SRMP-v1.01.src-patched/timer.h
+--- SRMP-v1.01.src-patched_old/timer.h	2013-07-04 13:30:50.000000000 +0200
++++ SRMP-v1.01.src-patched/timer.h	2014-08-26 14:21:22.436343000 +0200
+@@ -4,8 +4,10 @@
+ 
+ 
+ 
+-#ifndef NJAKSDTHASKJERAXJGFBZJDLAGZ
+-#define NJAKSDTHASKJERAXJGFBZJDLAGZ
++#ifndef SRMP_NJAKSDTHASKJERAXJGFBZJDLAGZ
++#define SRMP_NJAKSDTHASKJERAXJGFBZJDLAGZ
++
++namespace srmpLib {
+ 
+ // At most one of the flags
+ //    PM_TIMER_MSVC
+@@ -16,15 +18,15 @@
+ // can be defined externally. If PM_TIMER_EXTERNAL is defined,
+ // then there must exist a definition of function "double get_time()" elsewhere.
+ 
+-#if defined (PM_TIMER_MSVC) || defined (PM_TIMER_CLOCK_GETTIME) || defined (PM_TIMER_GETRUSAGE) || defined (PM_TIMER_EXTERNAL) || defined (PM_TIMER_NONE)
++#if defined (SRMP_PM_TIMER_MSVC) || defined (SRMP_PM_TIMER_CLOCK_GETTIME) || defined (SRMP_PM_TIMER_GETRUSAGE) || defined (SRMP_PM_TIMER_EXTERNAL) || defined (SRMP_PM_TIMER_NONE)
+ #else
+ 	// default option
+ 	#ifdef _MSC_VER
+-		#define PM_TIMER_MSVC
++		#define SRMP_PM_TIMER_MSVC
+ 	#elif defined(__APPLE_CC__)
+-		#define PM_TIMER_GETRUSAGE
++		#define SRMP_PM_TIMER_GETRUSAGE
+ 	#else
+-		#define PM_TIMER_CLOCK_GETTIME
++		#define SRMP_PM_TIMER_CLOCK_GETTIME
+ 	#endif
+ #endif
+ 
+@@ -32,7 +34,7 @@
+ //////////////////////////////////////////////////////////////////////////////////////
+ //////////////////////////////////////////////////////////////////////////////////////
+ 
+-#ifdef PM_TIMER_MSVC
++#ifdef SRMP_PM_TIMER_MSVC
+ 
+ 	#include <windows.h>
+ 
+@@ -50,7 +52,7 @@
+ //////////////////////////////////////////////////////////////////////////////////////
+ //////////////////////////////////////////////////////////////////////////////////////
+ 
+-#ifdef PM_TIMER_CLOCK_GETTIME
++#ifdef SRMP_PM_TIMER_CLOCK_GETTIME
+ 
+ 	#include <time.h>
+ 
+@@ -67,7 +69,7 @@
+ //////////////////////////////////////////////////////////////////////////////////////
+ //////////////////////////////////////////////////////////////////////////////////////
+ 
+-#ifdef PM_TIMER_GETRUSAGE
++#ifdef SRMP_PM_TIMER_GETRUSAGE
+ 
+ 	#include <sys/resource.h>
+ 
+@@ -84,7 +86,7 @@
+ //////////////////////////////////////////////////////////////////////////////////////
+ //////////////////////////////////////////////////////////////////////////////////////
+ 
+-#ifdef PM_TIMER_EXTERNAL
++#ifdef SRMP_PM_TIMER_EXTERNAL
+ 
+ 	extern double get_time();
+ 
+@@ -94,11 +96,13 @@
+ //////////////////////////////////////////////////////////////////////////////////////
+ //////////////////////////////////////////////////////////////////////////////////////
+ 
+-#ifdef PM_TIMER_NONE
++#ifdef SRMP_PM_TIMER_NONE
+ 
+ 	inline double get_time() { return 0; }
+ 
+ #endif
+ 
++} // namespace srmpLib
++
+ #endif
+ 
+diff -rupN SRMP-v1.01.src-patched_old/triplets.cpp SRMP-v1.01.src-patched/triplets.cpp
+--- SRMP-v1.01.src-patched_old/triplets.cpp	2014-01-10 11:15:00.000000000 +0100
++++ SRMP-v1.01.src-patched/triplets.cpp	2014-08-26 14:09:13.068323000 +0200
+@@ -21,7 +21,7 @@
+ #include <math.h>
+ #include <assert.h>
+ #include "util.h"
+-#include "../SRMP.h"
++#include "SRMP.h"
+ 
+ /*
+ struct MyNode;
+@@ -138,7 +138,7 @@ void Energy::Tighten()
+ 		if (A->arity != 2) continue;
+ 		if (!A->type->incoming_edges_allowed) continue;
+ 		double* theta = (double*) my_rbuf.Alloc(A->K*sizeof(double));
+-		COMPUTE_PARTIAL_REPARAMETERIZATION(A, theta);
++		SRMP_COMPUTE_PARTIAL_REPARAMETERIZATION(A, theta);
+ 		for (e=A->first_in; e; e=e->next_in)
+ 		{
+ 			for (a=0; a<A->K; a++) theta[a] += e->m[a];
+diff -rupN SRMP-v1.01.src-patched_old/util.h SRMP-v1.01.src-patched/util.h
+--- SRMP-v1.01.src-patched_old/util.h	2013-07-04 13:30:50.000000000 +0200
++++ SRMP-v1.01.src-patched/util.h	2014-08-26 14:21:09.840342000 +0200
+@@ -1,6 +1,7 @@
+-#ifndef GHAODJFNADJGHAJSD
+-#define GHAODJFNADJGHAJSD
++#ifndef SRMP_GHAODJFNADJGHAJSD
++#define SRMP_GHAODJFNADJGHAJSD
+ 
++namespace srmpLib {
+ 
+ // sorts arr[left..right]
+ template <class Item> inline void quickSort(Item* arr, int left, int right)
+@@ -39,4 +40,6 @@ template <class Item> inline void quickS
+ 	}
+ }
+ 
++} // namespace srmpLib
++
+ #endif
+diff -rupN SRMP-v1.01.src-patched_old/win.sln SRMP-v1.01.src-patched/win.sln
+--- SRMP-v1.01.src-patched_old/win.sln	2013-07-04 13:30:50.000000000 +0200
++++ SRMP-v1.01.src-patched/win.sln	1970-01-01 01:00:00.000000000 +0100
+@@ -1,20 +0,0 @@
+-﻿
+-Microsoft Visual Studio Solution File, Format Version 11.00
+-# Visual C++ Express 2010
+-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "win", "win.vcxproj", "{459F1B46-AAAC-4892-8130-1418F15820CB}"
+-EndProject
+-Global
+-	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+-		Debug|Win32 = Debug|Win32
+-		Release|Win32 = Release|Win32
+-	EndGlobalSection
+-	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+-		{459F1B46-AAAC-4892-8130-1418F15820CB}.Debug|Win32.ActiveCfg = Debug|Win32
+-		{459F1B46-AAAC-4892-8130-1418F15820CB}.Debug|Win32.Build.0 = Debug|Win32
+-		{459F1B46-AAAC-4892-8130-1418F15820CB}.Release|Win32.ActiveCfg = Release|Win32
+-		{459F1B46-AAAC-4892-8130-1418F15820CB}.Release|Win32.Build.0 = Release|Win32
+-	EndGlobalSection
+-	GlobalSection(SolutionProperties) = preSolution
+-		HideSolutionNode = FALSE
+-	EndGlobalSection
+-EndGlobal
+Binary files SRMP-v1.01.src-patched_old/win.suo and SRMP-v1.01.src-patched/win.suo differ
+diff -rupN SRMP-v1.01.src-patched_old/win.vcxproj SRMP-v1.01.src-patched/win.vcxproj
+--- SRMP-v1.01.src-patched_old/win.vcxproj	2014-01-10 13:46:58.000000000 +0100
++++ SRMP-v1.01.src-patched/win.vcxproj	1970-01-01 01:00:00.000000000 +0100
+@@ -1,109 +0,0 @@
+-﻿<?xml version="1.0" encoding="utf-8"?>
+-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+-  <ItemGroup Label="ProjectConfigurations">
+-    <ProjectConfiguration Include="Debug|Win32">
+-      <Configuration>Debug</Configuration>
+-      <Platform>Win32</Platform>
+-    </ProjectConfiguration>
+-    <ProjectConfiguration Include="Release|Win32">
+-      <Configuration>Release</Configuration>
+-      <Platform>Win32</Platform>
+-    </ProjectConfiguration>
+-  </ItemGroup>
+-  <PropertyGroup Label="Globals">
+-    <ProjectGuid>{459F1B46-AAAC-4892-8130-1418F15820CB}</ProjectGuid>
+-    <Keyword>Win32Proj</Keyword>
+-    <RootNamespace>win</RootNamespace>
+-  </PropertyGroup>
+-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+-    <ConfigurationType>Application</ConfigurationType>
+-    <UseDebugLibraries>true</UseDebugLibraries>
+-    <CharacterSet>Unicode</CharacterSet>
+-  </PropertyGroup>
+-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+-    <ConfigurationType>Application</ConfigurationType>
+-    <UseDebugLibraries>false</UseDebugLibraries>
+-    <WholeProgramOptimization>true</WholeProgramOptimization>
+-    <CharacterSet>Unicode</CharacterSet>
+-  </PropertyGroup>
+-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+-  <ImportGroup Label="ExtensionSettings">
+-  </ImportGroup>
+-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+-  </ImportGroup>
+-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+-  </ImportGroup>
+-  <PropertyGroup Label="UserMacros" />
+-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+-    <LinkIncremental>true</LinkIncremental>
+-  </PropertyGroup>
+-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+-    <LinkIncremental>false</LinkIncremental>
+-  </PropertyGroup>
+-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+-    <ClCompile>
+-      <PrecompiledHeader>
+-      </PrecompiledHeader>
+-      <WarningLevel>Level3</WarningLevel>
+-      <Optimization>Disabled</Optimization>
+-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+-    </ClCompile>
+-    <Link>
+-      <SubSystem>Console</SubSystem>
+-      <GenerateDebugInformation>true</GenerateDebugInformation>
+-    </Link>
+-  </ItemDefinitionGroup>
+-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+-    <ClCompile>
+-      <WarningLevel>Level3</WarningLevel>
+-      <PrecompiledHeader>
+-      </PrecompiledHeader>
+-      <Optimization>MaxSpeed</Optimization>
+-      <FunctionLevelLinking>true</FunctionLevelLinking>
+-      <IntrinsicFunctions>true</IntrinsicFunctions>
+-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+-    </ClCompile>
+-    <Link>
+-      <SubSystem>Console</SubSystem>
+-      <GenerateDebugInformation>true</GenerateDebugInformation>
+-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+-      <OptimizeReferences>true</OptimizeReferences>
+-    </Link>
+-  </ItemDefinitionGroup>
+-  <ItemGroup>
+-    <ClCompile Include="..\Algs\AddEdges.cpp" />
+-    <ClCompile Include="..\Algs\CMP.cpp" />
+-    <ClCompile Include="..\Algs\debug.cpp" />
+-    <ClCompile Include="..\Algs\energy.cpp" />
+-    <ClCompile Include="..\Algs\MPLP.cpp" />
+-    <ClCompile Include="..\Algs\order.cpp" />
+-    <ClCompile Include="..\Algs\SRMP.cpp" />
+-    <ClCompile Include="..\Algs\triplets.cpp" />
+-    <ClCompile Include="..\example.cpp" />
+-    <ClCompile Include="..\FactorTypes\GeneralType.cpp" />
+-    <ClCompile Include="..\FactorTypes\PairwiseDualType.cpp" />
+-    <ClCompile Include="..\FactorTypes\PairwiseType.cpp" />
+-    <ClCompile Include="..\FactorTypes\PatternType.cpp" />
+-    <ClCompile Include="..\FactorTypes\PottsType.cpp" />
+-    <ClCompile Include="..\FactorTypes\SharedPairwiseType.cpp" />
+-  </ItemGroup>
+-  <ItemGroup>
+-    <ClInclude Include="..\Algs\block.h" />
+-    <ClInclude Include="..\Algs\PQ.h" />
+-    <ClInclude Include="..\Algs\timer.h" />
+-    <ClInclude Include="..\Algs\util.h" />
+-    <ClInclude Include="..\FactorTypes\GeneralType.h" />
+-    <ClInclude Include="..\FactorTypes\PairwiseDualType.h" />
+-    <ClInclude Include="..\FactorTypes\PairwiseType.h" />
+-    <ClInclude Include="..\FactorTypes\PatternType.h" />
+-    <ClInclude Include="..\FactorTypes\PottsType.h" />
+-    <ClInclude Include="..\FactorTypes\SharedPairwiseType.h" />
+-    <ClInclude Include="..\SRMP.h" />
+-  </ItemGroup>
+-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+-  <ImportGroup Label="ExtensionTargets">
+-  </ImportGroup>
+-</Project>
+\ No newline at end of file
+diff -rupN SRMP-v1.01.src-patched_old/win.vcxproj.filters SRMP-v1.01.src-patched/win.vcxproj.filters
+--- SRMP-v1.01.src-patched_old/win.vcxproj.filters	2014-01-10 13:46:58.000000000 +0100
++++ SRMP-v1.01.src-patched/win.vcxproj.filters	1970-01-01 01:00:00.000000000 +0100
+@@ -1,105 +0,0 @@
+-﻿<?xml version="1.0" encoding="utf-8"?>
+-<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+-  <ItemGroup>
+-    <Filter Include="Source Files">
+-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+-    </Filter>
+-    <Filter Include="Header Files">
+-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+-      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+-    </Filter>
+-    <Filter Include="Resource Files">
+-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+-    </Filter>
+-    <Filter Include="Source Files\FactorTypes">
+-      <UniqueIdentifier>{f19908c2-1475-4bce-9f3b-de3383bf2b24}</UniqueIdentifier>
+-    </Filter>
+-    <Filter Include="Header Files\FactorTypes">
+-      <UniqueIdentifier>{75b0d8fc-c232-4a09-afa0-2adfde71a143}</UniqueIdentifier>
+-    </Filter>
+-  </ItemGroup>
+-  <ItemGroup>
+-    <ClCompile Include="..\example.cpp">
+-      <Filter>Source Files</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\FactorTypes\GeneralType.cpp">
+-      <Filter>Source Files\FactorTypes</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\FactorTypes\PairwiseType.cpp">
+-      <Filter>Source Files\FactorTypes</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\FactorTypes\PatternType.cpp">
+-      <Filter>Source Files\FactorTypes</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\FactorTypes\PottsType.cpp">
+-      <Filter>Source Files\FactorTypes</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\FactorTypes\SharedPairwiseType.cpp">
+-      <Filter>Source Files\FactorTypes</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\FactorTypes\PairwiseDualType.cpp">
+-      <Filter>Source Files\FactorTypes</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\Algs\AddEdges.cpp">
+-      <Filter>Source Files</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\Algs\debug.cpp">
+-      <Filter>Source Files</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\Algs\energy.cpp">
+-      <Filter>Source Files</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\Algs\MPLP.cpp">
+-      <Filter>Source Files</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\Algs\order.cpp">
+-      <Filter>Source Files</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\Algs\SRMP.cpp">
+-      <Filter>Source Files</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\Algs\triplets.cpp">
+-      <Filter>Source Files</Filter>
+-    </ClCompile>
+-    <ClCompile Include="..\Algs\CMP.cpp">
+-      <Filter>Source Files</Filter>
+-    </ClCompile>
+-  </ItemGroup>
+-  <ItemGroup>
+-    <ClInclude Include="..\SRMP.h">
+-      <Filter>Header Files</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\FactorTypes\GeneralType.h">
+-      <Filter>Header Files\FactorTypes</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\FactorTypes\PairwiseType.h">
+-      <Filter>Header Files\FactorTypes</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\FactorTypes\PatternType.h">
+-      <Filter>Header Files\FactorTypes</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\FactorTypes\PottsType.h">
+-      <Filter>Header Files\FactorTypes</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\FactorTypes\SharedPairwiseType.h">
+-      <Filter>Header Files\FactorTypes</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\FactorTypes\PairwiseDualType.h">
+-      <Filter>Header Files\FactorTypes</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\Algs\block.h">
+-      <Filter>Header Files</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\Algs\PQ.h">
+-      <Filter>Header Files</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\Algs\timer.h">
+-      <Filter>Header Files</Filter>
+-    </ClInclude>
+-    <ClInclude Include="..\Algs\util.h">
+-      <Filter>Header Files</Filter>
+-    </ClInclude>
+-  </ItemGroup>
+-</Project>
+\ No newline at end of file
+diff -rupN SRMP-v1.01.src-patched_old/win.vcxproj.user SRMP-v1.01.src-patched/win.vcxproj.user
+--- SRMP-v1.01.src-patched_old/win.vcxproj.user	2013-07-04 13:30:50.000000000 +0200
++++ SRMP-v1.01.src-patched/win.vcxproj.user	1970-01-01 01:00:00.000000000 +0100
+@@ -1,3 +0,0 @@
+-﻿<?xml version="1.0" encoding="utf-8"?>
+-<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+-</Project>
+\ No newline at end of file
