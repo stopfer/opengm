@@ -1,17 +1,15 @@
 #ifndef OPENGM_EXTERNAL_SRMP_HXX_
 #define OPENGM_EXTERNAL_SRMP_HXX_
 
-
 #include <opengm/graphicalmodel/graphicalmodel.hxx>
 #include <opengm/inference/inference.hxx>
 #include <opengm/operations/minimizer.hxx>
 #include <opengm/inference/visitors/visitors.hxx>
 #include <opengm/utilities/indexing.hxx>
 
-#include <SRMP.h>
-#include <PottsType.h>
-#include <GeneralType.h>
-
+#include <srmp/SRMP.h>
+#include <srmp/FactorTypes/PottsType.h>
+#include <srmp/FactorTypes/GeneralType.h>
 
 namespace opengm {
 namespace external {
@@ -31,17 +29,28 @@ public:
 
    struct Parameter : public srmpLib::Energy::Options {
       Parameter() : srmpLib::Energy::Options(), BLPRelaxation_(false),
-            FullRelaxation_(false), FullRelaxationValue_(0),
-            FullDualRelaxation_(false), FullDualRelaxationValue_(0) {
+            FullRelaxation_(false), FullRelaxationMethod_(0),
+            FullDualRelaxation_(false), FullDualRelaxationMethod_(0) {
          // disable verbose mode per default
          verbose = false;
       }
 
       bool BLPRelaxation_;
       bool FullRelaxation_;
-      int  FullRelaxationValue_;
+      int  FullRelaxationMethod_;         // method=0: add all possible pairs (A,B) with B \subset A, with the following exception:
+                                          //           if there exists factor C with B\subset C \subset A then don't add (A,B)
+                                          // method=1: move all costs to outer factors (converting them to general types first, if they are not already of these types).
+                                          //           Then run method=0 and remove unnecesary edges (i.e. those that do not affect the relaxation).
+                                          //           Note, all edges outgoing from outer factors will be kepts.
+                                          // method=2: similar to method=1, but all edges {A->B, B->C} are replaced with {A->B, A->C} (so this results in a two-layer graph).
+                                          //
+                                          // Note, method=1 and method=2 merge duplicate factors while method=0 does not. For this reason the relaxation may be tighther.
+                                          // (If there are no duplicate factors then the resulting relaxation should be the same in all three cases).
+                                          //
+                                          // method=3: run method=2 and then create a new Energy instance with unary and pairwise terms in which nodes correspond
+                                          // to outer factors of the original energy, and pairwise terms with {0,+\infty} costs enforce consistency between them.
       bool FullDualRelaxation_;
-      int  FullDualRelaxationValue_;
+      int  FullDualRelaxationMethod_;     // FullDualRelaxationMethod_ has the same meaning as in srmpLib::Energy::Options::sort_flag.
    };
 
    // construction
@@ -124,11 +133,10 @@ inline SRMP<GM>::SRMP(const GraphicalModelType& gm, const Parameter para)
    }
 
    // set options
+   srmpOptions_.method = parameter_.method;
    srmpOptions_.iter_max = parameter_.iter_max;
    srmpOptions_.time_max = parameter_.time_max;
    srmpOptions_.eps = parameter_.eps;
-   srmpOptions_.iter_max = parameter_.iter_max;
-   srmpOptions_.time_max = parameter_.time_max;
    srmpOptions_.compute_solution_period = parameter_.compute_solution_period;
    srmpOptions_.print_times = parameter_.print_times;
    srmpOptions_.sort_flag = parameter_.sort_flag;
@@ -171,8 +179,19 @@ template<class VISITOR>
 inline InferenceTermination SRMP<GM>::infer(VISITOR & visitor) {
    visitor.begin(*this);
 
+   if (parameter_.BLPRelaxation_) {
+      srmpSolver_.SetMinimalEdges();
+   } else if (parameter_.FullRelaxation_) {
+      srmpSolver_.SetFullEdges(parameter_.FullRelaxationMethod_);
+   } else if (parameter_.FullDualRelaxation_) {
+      srmpSolver_.SetFullEdgesDual(parameter_.FullDualRelaxationMethod_);
+   }
+
    // call solver
-   value_ = srmpSolver_.Solve(srmpOptions_);
+   lowerBound_ = srmpSolver_.Solve(srmpOptions_);
+   std::vector<LabelType> l;
+   arg(l);
+   value_ = gm_.evaluate(l);
 
    visitor.end(*this);
    return NORMAL;
@@ -199,7 +218,8 @@ inline typename GM::ValueType SRMP<GM>::bound() const {
 
 template<class GM>
 inline typename GM::ValueType SRMP<GM>::value() const {
-   return value_ + constTerm_;
+   return value_;
+   //return value_ + constTerm_;
 }
 
 template<class GM>
@@ -260,9 +280,10 @@ template<class GM>
 inline void SRMP<GM>::addGeneralFactor(const IndexType FactorID) {
    double* values = new double[gm_[FactorID].size()];
 
-   ShapeWalker<typename FactorType::ShapeIteratorType> shapeWalker(gm_[FactorID].shapeBegin(), gm_[FactorID].dimension());
+   ShapeWalkerSwitchedOrder<typename FactorType::ShapeIteratorType> shapeWalker(gm_[FactorID].shapeBegin(), gm_[FactorID].dimension());
    for(size_t i = 0; i < gm_[FactorID].size(); ++i) {
       values[i] = gm_[FactorID](shapeWalker.coordinateTuple().begin());
+      ++shapeWalker;
    }
 
    srmpLib::Energy::NodeId* nodes = new srmpLib::Energy::NodeId[gm_[FactorID].numberOfVariables()];

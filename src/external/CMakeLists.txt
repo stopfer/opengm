@@ -61,7 +61,7 @@ IF(WITH_GCO)
         ${GCO_PATCHEDSRCDIR}/graph.cpp
         ${GCO_PATCHEDSRCDIR}/LinkedBlockList.cpp
         ${GCO_PATCHEDSRCDIR}/maxflow.cpp
-	${GCO_PATCHEDSRCDIR}/instances.inc
+    ${GCO_PATCHEDSRCDIR}/instances.inc
     )
     
     SET(GCO_SRC_FILES_EXIST 1)
@@ -463,23 +463,23 @@ IF(WITH_MPLP)
     ENDIF(DEFINED MPLP_SRC_FILES_EXIST)
 ENDIF()
 
-IF(WITH_SRMP)
-    SET(SRMP_SRC_FILES
-        ${SRMP_PATCHEDSRCDIR}/AddEdges.cpp
-        ${SRMP_PATCHEDSRCDIR}/CMP.cpp
-        ${SRMP_PATCHEDSRCDIR}/debug.cpp
-        ${SRMP_PATCHEDSRCDIR}/energy.cpp
-        ${SRMP_PATCHEDSRCDIR}/MPLP.cpp
-        ${SRMP_PATCHEDSRCDIR}/order.cpp
-        ${SRMP_PATCHEDSRCDIR}/SRMP.cpp
-        ${SRMP_PATCHEDSRCDIR}/triplets.cpp
-        ${SRMP_PATCHEDSRCDIR}/GeneralType.cpp
-        ${SRMP_PATCHEDSRCDIR}/PairwiseDualType.cpp
-        ${SRMP_PATCHEDSRCDIR}/PairwiseType.cpp
-        ${SRMP_PATCHEDSRCDIR}/PatternType.cpp
-        ${SRMP_PATCHEDSRCDIR}/PottsType.cpp
-        ${SRMP_PATCHEDSRCDIR}/SharedPairwiseType.cpp
-    )
+if(WITH_SRMP)
+   SET(SRMP_SRC_FILES
+      ${SRMP_BASEDIR}/src/Algs/AddEdges.cpp
+      ${SRMP_BASEDIR}/src/Algs/CMP.cpp
+      ${SRMP_BASEDIR}/src/Algs/debug.cpp
+      ${SRMP_BASEDIR}/src/Algs/energy.cpp
+      ${SRMP_BASEDIR}/src/Algs/MPLP.cpp
+      ${SRMP_BASEDIR}/src/Algs/order.cpp
+      ${SRMP_BASEDIR}/src/Algs/SRMP.cpp
+      ${SRMP_BASEDIR}/src/Algs/triplets.cpp
+      ${SRMP_BASEDIR}/src/FactorTypes/GeneralType.cpp
+      ${SRMP_BASEDIR}/src/FactorTypes/PairwiseDualType.cpp
+      ${SRMP_BASEDIR}/src/FactorTypes/PairwiseType.cpp
+      ${SRMP_BASEDIR}/src/FactorTypes/PatternType.cpp
+      ${SRMP_BASEDIR}/src/FactorTypes/PottsType.cpp
+      ${SRMP_BASEDIR}/src/FactorTypes/SharedPairwiseType.cpp
+   )
     SET(SRMP_SRC_FILES_EXIST 1)
     FOREACH(f ${SRMP_SRC_FILES})
         IF(NOT EXISTS ${f})
@@ -497,7 +497,61 @@ IF(WITH_SRMP)
     ELSE(DEFINED SRMP_SRC_FILES_EXIST)
         MESSAGE ("SRMP not installed, run make externalLibs first and configure again")
     ENDIF(DEFINED SRMP_SRC_FILES_EXIST)
-ENDIF()
+endif(WITH_SRMP)
+
+if(WITH_PLANARITY)
+  SET(PLANARITY_SRC_FILES 
+     ${PLANARITY_PATCHEDSRCDIR}/graphNonplanar.c
+     ${PLANARITY_PATCHEDSRCDIR}/graphIsolator.c
+     ${PLANARITY_PATCHEDSRCDIR}/graphEmbed.c
+     ${PLANARITY_PATCHEDSRCDIR}/stack.c
+     ${PLANARITY_PATCHEDSRCDIR}/listcoll.c
+     ${PLANARITY_PATCHEDSRCDIR}/graphStructure.c
+     ${PLANARITY_PATCHEDSRCDIR}/graphPreprocess.c
+  )
+  SET(PLANARITY_SRC_FILES_EXIST 1)
+  FOREACH(f ${PLANARITY_SRC_FILES})
+    IF(NOT EXISTS ${f})
+       UNSET(PLANARITY_SRC_FILES_EXIST)
+    ENDIF(NOT EXISTS ${f})
+  ENDFOREACH(f)
+    
+  IF(DEFINED PLANARITY_SRC_FILES_EXIST)    
+    ADD_LIBRARY(opengm-external-planarity   ${PLANARITY_SRC_FILES})
+    ADD_LIBRARY(opengm-external-planarity-shared   SHARED ${PLANARITY_SRC_FILES} ) 
+  ELSE(DEFINED PLANARITY_SRC_FILES_EXIST)
+    MESSAGE ("PLANARITY not installed, run make externalLibs first and configure again")
+  ENDIF(DEFINED PLANARITY_SRC_FILES_EXIST)
+endif(WITH_PLANARITY)
+
+if(WITH_BLOSSOM5)
+  
+  SET(BLOSSOM5_SRC_FILES 
+    ${BLOSSOM5_PATCHEDSRCDIR}/misc.cpp
+    ${BLOSSOM5_PATCHEDSRCDIR}/PMduals.cpp
+    ${BLOSSOM5_PATCHEDSRCDIR}/PMexpand.cpp
+    ${BLOSSOM5_PATCHEDSRCDIR}/PMinit.cpp
+    ${BLOSSOM5_PATCHEDSRCDIR}/PMinterface.cpp
+    ${BLOSSOM5_PATCHEDSRCDIR}/PMmain.cpp
+    ${BLOSSOM5_PATCHEDSRCDIR}/PMrepair.cpp
+    ${BLOSSOM5_PATCHEDSRCDIR}/PMshrink.cpp
+    ${BLOSSOM5_PATCHEDSRCDIR}/MinCost/MinCost.cpp
+  )
+
+  SET(BLOSSOM5_SRC_FILES_EXIST 1)
+  FOREACH(f ${BLOSSOM5_SRC_FILES})
+    IF(NOT EXISTS ${f})
+       UNSET(BLOSSOM5_SRC_FILES_EXIST)
+    ENDIF(NOT EXISTS ${f})
+  ENDFOREACH(f)
+    
+  IF(DEFINED BLOSSOM5_SRC_FILES_EXIST)    
+    ADD_LIBRARY(opengm-external-blossom5   ${BLOSSOM5_SRC_FILES})
+    ADD_LIBRARY(opengm-external-blossom5-shared   SHARED ${BLOSSOM5_SRC_FILES} )
+  ELSE(DEFINED BLOSSOM5_SRC_FILES_EXIST)
+    MESSAGE ("BLOSSOM5 not installed, run make externalLibs first and configure again")
+  ENDIF(DEFINED BLOSSOM5_SRC_FILES_EXIST) 
+endif(WITH_BLOSSOM5)
 
 IF(WITH_SOSPD)
     SET(SOSPD_SRC_FILES

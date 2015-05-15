@@ -79,13 +79,27 @@ add_custom_command(TARGET externalLibs PRE_BUILD
                    COMMAND ./patchmplp_ver2.sh
                    COMMENT "MPLP"
                    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/MPLP"
-)
+) 
 
 add_custom_command(TARGET externalLibs PRE_BUILD                   
-                   COMMAND ./patchsrmp-v1.01.sh
-                   COMMENT "SRMP"
-                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/SRMP"
+                   COMMAND ./patchPlanarity.sh
+                   COMMENT "Planarity"
+                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/Planarity"
 ) 
+
+add_custom_command(TARGET externalLibs PRE_BUILD                   
+                   COMMAND ./patchBlossom5.sh
+                   COMMENT "Blossom5"
+                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/Blossom5"
+) 
+
+IF(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../SRMP")
+  add_custom_command(TARGET externalLibs PRE_BUILD                   
+    COMMAND git clone https://github.com/opengm/SRMP.git
+    COMMENT "SRMP"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../"
+  )
+ENDIF()
 
 add_custom_command(TARGET externalLibs PRE_BUILD                   
                    COMMAND ./patchsospd.sh
