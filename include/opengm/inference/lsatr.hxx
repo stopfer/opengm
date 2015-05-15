@@ -11,7 +11,7 @@
 #include "opengm/inference/inference.hxx"
 #include "opengm/inference/visitors/visitors.hxx"
 
-#include <maxflowlib.h>
+#include <maxflow/graph.h>
 
 #ifndef NOVIGRA
 #include "vigra/multi_distance.hxx"

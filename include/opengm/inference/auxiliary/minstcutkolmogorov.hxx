@@ -5,7 +5,7 @@
 #include <queue> 
 #include <cassert>
 
-#include <maxflowlib.h>
+#include <maxflow/graph.h>
 
 namespace opengm {
 

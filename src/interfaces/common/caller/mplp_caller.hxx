@@ -62,7 +62,7 @@ inline MPLPCaller<IO, GM, ACC>::MPLPCaller(IO& ioIn)
 // addArgument(StringArgument<>(mplpParameter_.inputFile_,    "", "inputFile", "Path to MPLP input file (if inputFile is set, the MPLP-Algorithm will load the model from the given file instead of using the openGM model)"));
 // addArgument(StringArgument<>(mplpParameter_.evidenceFile_, "", "evidenceFile", "Path to MPLP evidence file (will only be used if inputFile is set"));
 
-   addArgument(IntArgument<>(mplpParameter_.seed_, "", "seed", "Seed for random number generator", mplpParameter_.seed_));
+   addArgument(ArgumentBase<unsigned int>(mplpParameter_.seed_, "", "seed", "Seed for random number generator", mplpParameter_.seed_));
 }
 
 template <class IO, class GM, class ACC>

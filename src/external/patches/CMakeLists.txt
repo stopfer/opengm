@@ -27,10 +27,16 @@ add_custom_command(TARGET externalLibs PRE_BUILD
                    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/GCO"
 )
 
+#add_custom_command(TARGET externalLibs PRE_BUILD                   
+#                   COMMAND ./patchMaxFlow-v3.02.sh
+#                   COMMENT "MaxFlow"
+#                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/MaxFlow"
+#)
+
 add_custom_command(TARGET externalLibs PRE_BUILD                   
-                   COMMAND ./patchMaxFlow-v3.02.sh
-                   COMMENT "MaxFlow"
-                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/MaxFlow"
+  COMMAND git clone https://github.com/opengm/maxflow.git
+  COMMENT "MaxFlow"
+  WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../"
 )   
 
 add_custom_command(TARGET externalLibs PRE_BUILD                   
@@ -75,11 +81,16 @@ add_custom_command(TARGET externalLibs PRE_BUILD
                    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/DAOOPT"
 ) 
 
+#add_custom_command(TARGET externalLibs PRE_BUILD                   
+#                   COMMAND ./patchmplp_ver2.sh
+#                   COMMENT "MPLP"
+#                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/MPLP"
+#) 
 add_custom_command(TARGET externalLibs PRE_BUILD                   
-                   COMMAND ./patchmplp_ver2.sh
-                   COMMENT "MPLP"
-                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/MPLP"
-) 
+  COMMAND git clone https://github.com/opengm/MPLP.git
+  COMMENT "MPLP"
+  WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../"
+)
 
 add_custom_command(TARGET externalLibs PRE_BUILD                   
   COMMAND git clone https://github.com/opengm/SRMP.git

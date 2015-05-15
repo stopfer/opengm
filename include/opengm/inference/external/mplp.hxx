@@ -11,8 +11,7 @@
 #include "opengm/inference/visitors/visitors.hxx"
 
 // mplp logic
-#include <cycle.h>
-#undef eps   
+#include <MPLP/cycle.h>
 
 namespace opengm {
 
@@ -62,7 +61,7 @@ public:
          //const double infTime = 0.0,
          const bool logMode = false,
          const std::string& logFile = std::string(), 
-         const int seed = 0,
+         const unsigned int seed = 0,
          const std::string& inputFile = std::string(),
          const std::string& evidenceFile = std::string()
          )
@@ -122,7 +121,7 @@ public:
       double infTime_;
 
       std::string logFile_;
-      int seed_;
+      unsigned int seed_;
       std::string inputFile_;
       std::string evidenceFile_;
    };
@@ -149,7 +148,7 @@ protected:
    FILE* mplpLogFile_;
    //double mplpTimeLimit_;
    clock_t mplpStart_;
-   MPLPAlg* mplp_;
+   mplpLib::MPLPAlg* mplp_;
 
    bool valueCheck() const;
 };
@@ -186,19 +185,19 @@ inline MPLP<GM>::MPLP(const GraphicalModelType& gm, const Parameter& para)
   // Load in the MRF and initialize GMPLP state
   if(!parameter_.inputFile_.empty()) {
      //mplp_ = new MPLPAlg(mplpStart_, mplpTimeLimit_, parameter_.inputFile_, parameter_.evidenceFile_, mplpLogFile_, parameter_.lookForCSPs_);
-     mplp_ = new MPLPAlg(mplpStart_, parameter_.maxTime_, parameter_.inputFile_, parameter_.evidenceFile_, mplpLogFile_, parameter_.lookForCSPs_);
+     mplp_ = new mplpLib::MPLPAlg(mplpStart_, parameter_.maxTime_, parameter_.inputFile_, parameter_.evidenceFile_, mplpLogFile_, parameter_.lookForCSPs_);
   } else {
      // fill vectors from opengm model
-     std::vector<int> var_sizes(gm_.numberOfVariables());
+     std::vector<mplpLib::MPLPIndexType> var_sizes(gm_.numberOfVariables());
      for(IndexType var = 0; var < gm_.numberOfVariables(); ++var){
-        var_sizes[var] = static_cast<int>(gm_.numberOfLabels(var));
+        var_sizes[var] = static_cast<mplpLib::MPLPIndexType>(gm_.numberOfLabels(var));
      }
 
-     std::vector< std::vector<int> > all_factors(gm_.numberOfFactors());
+     std::vector< std::vector<mplpLib::MPLPIndexType> > all_factors(gm_.numberOfFactors());
      for(IndexType f = 0; f < gm_.numberOfFactors(); ++f){
         all_factors[f].resize(gm_[f].numberOfVariables());
         for(IndexType i = 0; i < gm_[f].numberOfVariables(); ++i){
-           all_factors[f][i] = static_cast<int>(gm_[f].variableIndex(i));
+           all_factors[f][i] = static_cast<mplpLib::MPLPIndexType>(gm_[f].variableIndex(i));
         }
      }
 
@@ -216,7 +215,7 @@ inline MPLP<GM>::MPLP(const GraphicalModelType& gm, const Parameter& para)
      }
 
      //mplp_ = new MPLPAlg(mplpStart_, mplpTimeLimit_, var_sizes, all_factors, all_lambdas, mplpLogFile_, parameter_.lookForCSPs_);
-     mplp_ = new MPLPAlg(mplpStart_, parameter_.maxTime_, var_sizes, all_factors, all_lambdas, mplpLogFile_, parameter_.lookForCSPs_);
+     mplp_ = new mplpLib::MPLPAlg(mplpStart_, parameter_.maxTime_, var_sizes, all_factors, all_lambdas, mplpLogFile_, parameter_.lookForCSPs_);
   }
 }
 
@@ -253,7 +252,7 @@ inline InferenceTermination MPLP<GM>::infer(VISITOR & visitor) {
    bool prevGlobalDecodingWas1 = true;
 
    // Keep track of triplets added so far
-   std::map<std::vector<int>, bool> triplet_set;
+   std::map<std::vector<mplpLib::MPLPIndexType>, bool> triplet_set;
 
    //if(MPLP_DEBUG_MODE) std::cout << "Random seed = " << parameter_.seed_ << std::endl;
    srand(parameter_.seed_);
@@ -338,12 +337,12 @@ inline InferenceTermination MPLP<GM>::infer(VISITOR & visitor) {
 
       clock_t tightening_start_time = clock();
       double bound=0; double bound2 = 0;
-      int nClustersAdded = 0;
+      mplpLib::MPLPIndexType nClustersAdded = 0;
 
-      nClustersAdded += TightenTriplet(*mplp_, parameter_.numClusToAddMin_, parameter_.numClusToAddMax_, triplet_set, bound);
-      nClustersAdded += TightenCycle(*mplp_, parameter_.numClusToAddMin_, triplet_set, bound2, 1);
+      nClustersAdded += mplpLib::TightenTriplet(*mplp_, parameter_.numClusToAddMin_, parameter_.numClusToAddMax_, triplet_set, bound);
+      nClustersAdded += mplpLib::TightenCycle(*mplp_, parameter_.numClusToAddMin_, triplet_set, bound2, 1);
 
-      if(std::max(bound, bound2) < CLUSTER_THR) {
+      if(std::max(bound, bound2) < MPLP_CLUSTER_THR) {
          if(MPLP_DEBUG_MODE) std::cout << "TightenCycle did not find anything useful! Re-running with FindPartition." << std::endl;
 
          nClustersAdded += TightenCycle(*mplp_, parameter_.numClusToAddMin_, triplet_set, bound2, 2);
@@ -352,7 +351,7 @@ inline InferenceTermination MPLP<GM>::infer(VISITOR & visitor) {
       // Check to see if guaranteed bound criterion was non-trivial.
       // TODO: these bounds are not for the cycles actually added (since many of the top ones are skipped, already being in the relaxation). Modify it to be so.
       bool noprogress = false;
-      if(std::max(bound, bound2) < CLUSTER_THR) noprogress = true;
+      if(std::max(bound, bound2) < MPLP_CLUSTER_THR) noprogress = true;
 
       clock_t tightening_end_time = clock();
       double tightening_total_time = (double)(tightening_end_time - tightening_start_time)/CLOCKS_PER_SEC;

@@ -83,10 +83,34 @@ IF(WITH_GCO)
     ENDIF(DEFINED GCO_SRC_FILES_EXIST)
 ENDIF()
 
+#IF(WITH_MAXFLOW)
+#    SET(MAXFLOW_SRC_FILES
+#        ${MAXFLOW_PATCHEDSRCDIR}/graph.cpp
+#        ${MAXFLOW_PATCHEDSRCDIR}/maxflow.cpp
+#    )
+#    
+#    SET(MAXFLOW_SRC_FILES_EXIST 1)
+#    FOREACH(f ${MAXFLOW_SRC_FILES})
+#        IF(NOT EXISTS ${f})
+#            UNSET(MAXFLOW_SRC_FILES_EXIST)
+#        ENDIF(NOT EXISTS ${f})
+#    ENDFOREACH(f)
+#     
+#    IF(DEFINED MAXFLOW_SRC_FILES_EXIST)    
+#      ADD_LIBRARY(external-library-maxflow
+#                  ${MAXFLOW_SRC_FILES}
+#      )
+#      ADD_LIBRARY(external-library-maxflow-shared SHARED
+#                  ${MAXFLOW_SRC_FILES}
+#      )  
+#    ELSE(DEFINED MAXFLOW_SRC_FILES_EXIST)
+#        MESSAGE ("MAXFLOW not installed, run make externalLibs first and configure again")
+#    ENDIF(DEFINED MAXFLOW_SRC_FILES_EXIST)
+#ENDIF()
 IF(WITH_MAXFLOW)
     SET(MAXFLOW_SRC_FILES
-        ${MAXFLOW_PATCHEDSRCDIR}/graph.cpp
-        ${MAXFLOW_PATCHEDSRCDIR}/maxflow.cpp
+        ${MAXFLOW_BASEDIR}/src/graph.cpp
+        ${MAXFLOW_BASEDIR}/src/maxflow.cpp
     )
     
     SET(MAXFLOW_SRC_FILES_EXIST 1)
@@ -106,7 +130,7 @@ IF(WITH_MAXFLOW)
     ELSE(DEFINED MAXFLOW_SRC_FILES_EXIST)
         MESSAGE ("MAXFLOW not installed, run make externalLibs first and configure again")
     ENDIF(DEFINED MAXFLOW_SRC_FILES_EXIST)
-ENDIF()
+ENDIF(WITH_MAXFLOW)
 
 IF(WITH_MAXFLOW_IBFS)
     SET(MAXFLOW_IBFS_SRC_FILES
@@ -437,12 +461,37 @@ IF(WITH_DAOOPT)
     ENDIF(DEFINED DAOOPT_SRC_FILES_EXIST)
 ENDIF(WITH_DAOOPT)
 
+#IF(WITH_MPLP)
+#    SET(MPLP_SRC_FILES
+#        ${MPLP_PATCHEDSRCDIR}/matrix.cpp
+#        ${MPLP_PATCHEDSRCDIR}/mplp_alg.cpp
+#        ${MPLP_PATCHEDSRCDIR}/muldim_arr.cpp
+#        ${MPLP_PATCHEDSRCDIR}/read_model_file.cpp
+#    )
+#    SET(MPLP_SRC_FILES_EXIST 1)
+#    FOREACH(f ${MPLP_SRC_FILES})
+#        IF(NOT EXISTS ${f})
+#            UNSET(MPLP_SRC_FILES_EXIST)
+#        ENDIF(NOT EXISTS ${f})
+#    ENDFOREACH(f)
+#    
+#    IF(DEFINED MPLP_SRC_FILES_EXIST)    
+#      ADD_LIBRARY(external-library-mplp
+#                  ${MPLP_SRC_FILES}
+#      ) 
+#      ADD_LIBRARY(external-library-mplp-shared SHARED
+#                  ${MPLP_SRC_FILES}
+#      )
+#    ELSE(DEFINED MPLP_SRC_FILES_EXIST)
+#        MESSAGE ("MPLP not installed, run make externalLibs first and configure again")
+#    ENDIF(DEFINED MPLP_SRC_FILES_EXIST)
+#ENDIF()
 IF(WITH_MPLP)
     SET(MPLP_SRC_FILES
-        ${MPLP_PATCHEDSRCDIR}/matrix.cpp
-        ${MPLP_PATCHEDSRCDIR}/mplp_alg.cpp
-        ${MPLP_PATCHEDSRCDIR}/muldim_arr.cpp
-        ${MPLP_PATCHEDSRCDIR}/read_model_file.cpp
+        ${MPLP_BASEDIR}/src/matrix.cpp
+        ${MPLP_BASEDIR}/src/mplp_alg.cpp
+        ${MPLP_BASEDIR}/src/muldim_arr.cpp
+        ${MPLP_BASEDIR}/src/read_model_file.cpp
     )
     SET(MPLP_SRC_FILES_EXIST 1)
     FOREACH(f ${MPLP_SRC_FILES})
@@ -461,7 +510,7 @@ IF(WITH_MPLP)
     ELSE(DEFINED MPLP_SRC_FILES_EXIST)
         MESSAGE ("MPLP not installed, run make externalLibs first and configure again")
     ENDIF(DEFINED MPLP_SRC_FILES_EXIST)
-ENDIF()
+ENDIF(WITH_MPLP)
 
 if(WITH_SRMP)
    SET(SRMP_SRC_FILES
