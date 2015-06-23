@@ -4,8 +4,10 @@
 #include <opengm/opengm.hxx>
 #include <opengm/datastructures/linear_constraint.hxx>
 
+#include <opengm/functions/potts.hxx>
 #include <opengm/functions/soft_constraint_functions/sum_constraint_function.hxx>
 #include <opengm/functions/soft_constraint_functions/label_cost_function.hxx>
+
 namespace opengm {
 
 /*********************
@@ -79,6 +81,30 @@ public:
    typedef INDEX_TYPE                                                                         IndexType;
    typedef LABEL_TYPE                                                                         LabelType;
    typedef FUNCTION_TYPE                                                                      FunctionType;
+   typedef LPFunctionTransfer<ValueType, IndexType, LabelType>                                LPFunctionTransferType;
+   typedef typename LPFunctionTransferType::LinearConstraintType                              LinearConstraintType;
+   typedef typename LPFunctionTransferType::LinearConstraintsContainerType                    LinearConstraintsContainerType;
+   typedef typename LPFunctionTransferType::IndicatorVariableType                             IndicatorVariableType;
+   typedef typename LPFunctionTransferType::IndicatorVariablesContainerType                   IndicatorVariablesContainerType;
+   typedef typename LPFunctionTransferType:: SlackVariablesObjectiveCoefficientsContainerType SlackVariablesObjectiveCoefficientsContainerType;
+
+   // transfer interface
+   static bool isTransferable();
+   static IndexType numSlackVariables(const FunctionType& function);
+   static void getSlackVariablesOrder(const FunctionType& function, IndicatorVariablesContainerType& order);
+   static void getSlackVariablesObjectiveCoefficients(const FunctionType& function, SlackVariablesObjectiveCoefficientsContainerType& coefficients);
+   static void getIndicatorVariables(const FunctionType& function, IndicatorVariablesContainerType& variables);
+   static void getLinearConstraints(const FunctionType& function, LinearConstraintsContainerType& constraints);
+};
+
+template<class VALUE_TYPE, class INDEX_TYPE, class LABEL_TYPE>
+class LPFunctionTransfer_impl<PottsFunction<VALUE_TYPE, INDEX_TYPE, LABEL_TYPE>, VALUE_TYPE, INDEX_TYPE, LABEL_TYPE> {
+public:
+   // typedefs
+   typedef VALUE_TYPE                                                                         ValueType;
+   typedef INDEX_TYPE                                                                         IndexType;
+   typedef LABEL_TYPE                                                                         LabelType;
+   typedef PottsFunction<VALUE_TYPE, INDEX_TYPE, LABEL_TYPE>                                  FunctionType;
    typedef LPFunctionTransfer<ValueType, IndexType, LabelType>                                LPFunctionTransferType;
    typedef typename LPFunctionTransferType::LinearConstraintType                              LinearConstraintType;
    typedef typename LPFunctionTransferType::LinearConstraintsContainerType                    LinearConstraintsContainerType;
@@ -694,6 +720,111 @@ inline void LPFunctionTransfer_impl<FUNCTION_TYPE, VALUE_TYPE, INDEX_TYPE, LABEL
    throw opengm::RuntimeError("Unsupported Function Type.");
 }
 
+template<class VALUE_TYPE, class INDEX_TYPE, class LABEL_TYPE>
+inline bool LPFunctionTransfer_impl<PottsFunction<VALUE_TYPE, INDEX_TYPE, LABEL_TYPE>, VALUE_TYPE, INDEX_TYPE, LABEL_TYPE>::isTransferable() {
+   // implementation for PottsFunction
+   return true;
+}
+
+template<class VALUE_TYPE, class INDEX_TYPE, class LABEL_TYPE>
+inline typename LPFunctionTransfer_impl<PottsFunction<VALUE_TYPE, INDEX_TYPE, LABEL_TYPE>, VALUE_TYPE, INDEX_TYPE, LABEL_TYPE>::IndexType LPFunctionTransfer_impl<PottsFunction<VALUE_TYPE, INDEX_TYPE, LABEL_TYPE>, VALUE_TYPE, INDEX_TYPE, LABEL_TYPE>::numSlackVariables(const FunctionType& function) {
+   // implementation for PottsFunction
+   // Number of required slack variables depends on the values function.valueEqual_ and function.valueNotEqual_
+   const IndexType numEqualLabelSlackVariables = (function.valueEqual_ == 0.0 ? 0 : 1); // a slack variable for equal labels is only required if return value is different from zero.
+   const IndexType numNotEqualLabelSlackVariables = (function.valueNotEqual_ == 0.0 ? 0 : 1); // a slack variable for different labels is only required if return value is different from zero.
+   return numEqualLabelSlackVariables + numNotEqualLabelSlackVariables;
+}
+
+template<class VALUE_TYPE, class INDEX_TYPE, class LABEL_TYPE>
+inline void LPFunctionTransfer_impl<PottsFunction<VALUE_TYPE, INDEX_TYPE, LABEL_TYPE>, VALUE_TYPE, INDEX_TYPE, LABEL_TYPE>::getSlackVariablesOrder(const FunctionType& function, IndicatorVariablesContainerType& order) {
+   // implementation for PottsFunction
+   const IndexType numSlackVars = numSlackVariables(function);
+   order.resize(numSlackVars);
+   for(IndexType i = 0; i < numSlackVars; ++i) {
+      order[i] = IndicatorVariableType(IndexType(2) + i, LabelType(0));
+   }
+}
+
+template<class VALUE_TYPE, class INDEX_TYPE, class LABEL_TYPE>
+inline void LPFunctionTransfer_impl<PottsFunction<VALUE_TYPE, INDEX_TYPE, LABEL_TYPE>, VALUE_TYPE, INDEX_TYPE, LABEL_TYPE>::getSlackVariablesObjectiveCoefficients(const FunctionType& function, SlackVariablesObjectiveCoefficientsContainerType& coefficients) {
+   // implementation for PottsFunction
+   coefficients.resize(numSlackVariables(function));
+   IndexType i = 0;
+   if(function.valueNotEqual_ != 0.0) {
+      // first slack variable represents labels not equal case if function.valueNotEqual_ != 0.0
+      coefficients[i] = function.valueNotEqual_;
+      ++i;
+   }
+   if(function.valueEqual_ != 0.0) {
+      // slack variable represents labels equal case if function.valueEqual_ != 0.0
+      coefficients[i] = function.valueEqual_;
+   }
+}
+
+template<class VALUE_TYPE, class INDEX_TYPE, class LABEL_TYPE>
+inline void LPFunctionTransfer_impl<PottsFunction<VALUE_TYPE, INDEX_TYPE, LABEL_TYPE>, VALUE_TYPE, INDEX_TYPE, LABEL_TYPE>::getIndicatorVariables(const FunctionType& function, IndicatorVariablesContainerType& variables) {
+   // implementation for PottsFunction
+   variables.clear();
+   if((function.valueNotEqual_ != 0.0) || (function.valueEqual_ != 0.0)) {
+      const LabelType minNumLabels = std::min(function.numberOfLabels1_, function.numberOfLabels2_);
+      for(LabelType i = 0; i < minNumLabels; ++i) {
+         IndicatorVariableType indicatorVariable;
+         indicatorVariable.add(IndexType(0), i);
+         indicatorVariable.add(IndexType(1), i);
+         variables.push_back(indicatorVariable);
+      }
+
+      const IndexType numSlackVars = numSlackVariables(function);
+      for(IndexType i = 0; i < numSlackVars; ++i) {
+         variables.push_back(IndicatorVariableType(IndexType(2) + i, LabelType(0)));
+      }
+   }
+}
+
+template<class VALUE_TYPE, class INDEX_TYPE, class LABEL_TYPE>
+inline void LPFunctionTransfer_impl<PottsFunction<VALUE_TYPE, INDEX_TYPE, LABEL_TYPE>, VALUE_TYPE, INDEX_TYPE, LABEL_TYPE>::getLinearConstraints(const FunctionType& function, LinearConstraintsContainerType& constraints) {
+   // implementation for PottsFunction
+   const IndexType numSlackVars = numSlackVariables(function);
+   constraints.resize(numSlackVars); // one constraint for each slack variable
+
+   const LabelType minNumLabels = std::min(function.numberOfLabels1_, function.numberOfLabels2_);
+   IndexType currentConstraint = 0;
+   if(function.valueNotEqual_ != 0.0) {
+      LinearConstraintType constraint;
+      constraint.setConstraintOperator(LinearConstraintType::LinearConstraintOperatorType::Equal);
+      constraint.setBound(1.0);
+      for(LabelType i = 0; i < minNumLabels; ++i) {
+            IndicatorVariableType indicatorVariable;
+            indicatorVariable.add(IndexType(0), i);
+            indicatorVariable.add(IndexType(1), i);
+            constraint.add(indicatorVariable, 1.0);
+      }
+      constraint.add(IndicatorVariableType(IndexType(2), LabelType(0)), 1.0);
+      constraints[currentConstraint] = constraint;
+      ++currentConstraint;
+   }
+   if(function.valueEqual_ != 0.0) {
+      LinearConstraintType constraint;
+      constraint.setConstraintOperator(LinearConstraintType::LinearConstraintOperatorType::Equal);
+      if(function.valueNotEqual_ != 0.0) {
+         // invert first slack variable
+         constraint.setBound(1.0);
+         constraint.add(IndicatorVariableType(IndexType(2), LabelType(0)), 1.0);
+         constraint.add(IndicatorVariableType(IndexType(3), LabelType(0)), 1.0);
+      } else {
+         constraint.setBound(0.0);
+         for(LabelType i = 0; i < minNumLabels; ++i) {
+               IndicatorVariableType indicatorVariable;
+               indicatorVariable.add(IndexType(0), i);
+               indicatorVariable.add(IndexType(1), i);
+               constraint.add(indicatorVariable, 1.0);
+         }
+         constraint.add(IndicatorVariableType(IndexType(2), LabelType(0)), -1.0);
+         constraints[currentConstraint] = constraint;
+      }
+      constraints[currentConstraint] = constraint;
+   }
+}
 
 template<class VALUE_TYPE, class INDEX_TYPE, class LABEL_TYPE>
 inline bool LPFunctionTransfer_impl<SumConstraintFunction<VALUE_TYPE, INDEX_TYPE, LABEL_TYPE>, VALUE_TYPE, INDEX_TYPE, LABEL_TYPE>::isTransferable() {

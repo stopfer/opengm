@@ -132,10 +132,11 @@ int main(){
 
          typedef opengm::SumConstraintFunction<ValueType, IndexType, LabelType> SumConstraintFunctionType;
          typedef opengm::LabelCostFunction<ValueType, IndexType, LabelType>     LabelCostFunctionType;
+         typedef opengm::PottsFunction<ValueType, IndexType, LabelType>         PottsFunctionType;
 
          typedef opengm::meta::TypeListGenerator<
                opengm::ExplicitFunction<ValueType, IndexType, LabelType>,
-               opengm::PottsFunction<ValueType, IndexType, LabelType>,
+               PottsFunctionType,
                SumConstraintFunctionType,
                LabelCostFunctionType
                >::type FunctionTypeList;
@@ -228,6 +229,27 @@ int main(){
             labelCostFunctionIndices.push_back(i);
          }
          gm.addFactor(labelCostFunctionId, labelCostFunctionIndices.begin(), labelCostFunctionIndices.end());
+
+         // add potts
+         FunctionIdentifier pottsFunctionID;
+         PottsFunctionType pottsFunction(numLabels, numLabels, 0.0, 21.0);
+         pottsFunctionID = gm.addFunction(pottsFunction);
+         IndexType variables[]  = {0, 1};
+         for(IndexType n = 0; n < gridSizeN; ++n){
+            for(IndexType m = 0; m < gridSizeM; ++m){
+               variables[0] = n + (m * gridSizeN);
+               if(n + 1 < gridSizeN){
+                  //add potts with lower neighbor
+                  variables[1] = n + 1 + (m * gridSizeN);
+                  gm.addFactor(pottsFunctionID, variables, variables + 2);
+               }
+               if(m + 1 < gridSizeM){
+                  //add potts with right neighbor
+                  variables[1] = n + ((m + 1) * gridSizeN);
+                  gm.addFactor(pottsFunctionID, variables, variables + 2);
+               }
+            }
+         }
 
          LPGurobi::Parameter para;
          //para.verbose_ = true;

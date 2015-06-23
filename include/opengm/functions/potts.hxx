@@ -11,6 +11,8 @@
 #include "opengm/functions/function_properties_base.hxx"
 
 namespace opengm {
+template<class FUNCTION_TYPE, class VALUE_TYPE, class INDEX_TYPE, class LABEL_TYPE>
+class LPFunctionTransfer_impl;
 
 /// Potts function for two variables
 ///
@@ -52,7 +54,8 @@ private:
    ValueType valueEqual_;
    ValueType valueNotEqual_;
 
-friend class FunctionSerialization<PottsFunction<T, I, L> > ;
+   friend class FunctionSerialization<PottsFunction<T, I, L> > ;
+   friend class LPFunctionTransfer_impl<PottsFunction<T, I, L>, T, I, L>;
 };
 
 /// \cond HIDDEN_SYMBOLS

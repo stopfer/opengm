@@ -5,10 +5,12 @@
 #include <opengm/utilities/random.hxx>
 
 #include <opengm/functions/explicit_function.hxx>
+#include <opengm/functions/potts.hxx>
 #include <opengm/functions/soft_constraint_functions/sum_constraint_function.hxx>
 #include <opengm/functions/soft_constraint_functions/label_cost_function.hxx>
 
 void testExplicitFunction();
+void testPottsFunction();
 void testSumConstraintFunction();
 void testLabelCostFunction();
 
@@ -17,9 +19,10 @@ int main(int argc, char** argv){
 
    std::cout << "Test explicit function" << std::endl;
    testExplicitFunction();
+   std::cout << "Test potts function" << std::endl;
+   testPottsFunction();
    std::cout << "Test sum constraint function" << std::endl;
    testSumConstraintFunction();
-
    std::cout << "Test label cost function" << std::endl;
    testLabelCostFunction();
 
@@ -82,6 +85,260 @@ void testExplicitFunction() {
       catchGetLinearConstraintsError = true;
    }
    OPENGM_TEST_EQUAL(catchGetLinearConstraintsError, true);
+}
+
+void testPottsFunction() {
+   typedef double ValueType;
+   typedef size_t IndexType;
+   typedef size_t LabelType;
+
+   typedef opengm::LPFunctionTransfer<ValueType, IndexType, LabelType> LPFunctionTransformationType;
+   typedef opengm::PottsFunction<ValueType, IndexType, LabelType>      PottsFunctionType;
+
+   const IndexType numVariables  = 2;
+   const LabelType numLabelsVar1 = 5;
+   const LabelType numLabelsVar2 = 10;
+   const LabelType minNumLabels  = numLabelsVar1 < numLabelsVar2 ? numLabelsVar1 : numLabelsVar2;
+   const ValueType valueEqual    = 1.0;
+   const ValueType valueNotEqual = 10.0;
+
+   // create function
+   PottsFunctionType pottsFunction1(numLabelsVar1, numLabelsVar2, valueEqual, valueNotEqual);
+   PottsFunctionType pottsFunction2(numLabelsVar1, numLabelsVar2, 0.0, valueNotEqual);
+   PottsFunctionType pottsFunction3(numLabelsVar1, numLabelsVar2, valueEqual, 0.0);
+   PottsFunctionType pottsFunction4(numLabelsVar1, numLabelsVar2, 0.0, 0.0);
+
+   OPENGM_TEST_EQUAL(LPFunctionTransformationType::isTransferable<PottsFunctionType>(), true);
+
+   bool catchNumSlackVariablesError = false;
+   try {
+      OPENGM_TEST_EQUAL(LPFunctionTransformationType::numSlackVariables(pottsFunction1), 2);
+      OPENGM_TEST_EQUAL(LPFunctionTransformationType::numSlackVariables(pottsFunction2), 1);
+      OPENGM_TEST_EQUAL(LPFunctionTransformationType::numSlackVariables(pottsFunction3), 1);
+      OPENGM_TEST_EQUAL(LPFunctionTransformationType::numSlackVariables(pottsFunction4), 0);
+   } catch(opengm::RuntimeError& error) {
+      catchNumSlackVariablesError = true;
+   }
+   OPENGM_TEST_EQUAL(catchNumSlackVariablesError, false);
+
+   bool catchGetSlackVariablesOrderError = false;
+   try {
+      LPFunctionTransformationType::IndicatorVariablesContainerType order1;
+      LPFunctionTransformationType::IndicatorVariablesContainerType order2;
+      LPFunctionTransformationType::IndicatorVariablesContainerType order3;
+      LPFunctionTransformationType::IndicatorVariablesContainerType order4;
+      LPFunctionTransformationType::getSlackVariablesOrder(pottsFunction1, order1);
+      LPFunctionTransformationType::getSlackVariablesOrder(pottsFunction2, order2);
+      LPFunctionTransformationType::getSlackVariablesOrder(pottsFunction3, order3);
+      LPFunctionTransformationType::getSlackVariablesOrder(pottsFunction4, order4);
+      OPENGM_TEST_EQUAL(order1.size(), 2);
+      OPENGM_TEST_EQUAL(std::distance(order1[0].begin(), order1[0].end()), 1);
+      OPENGM_TEST_EQUAL(order1[0].begin()->first, numVariables);
+      OPENGM_TEST_EQUAL(order1[0].begin()->second, 0);
+      OPENGM_TEST_EQUAL(order1[0].getLogicalOperatorType(), LPFunctionTransformationType::IndicatorVariableType::And);
+      OPENGM_TEST_EQUAL(std::distance(order1[1].begin(), order1[1].end()), 1);
+      OPENGM_TEST_EQUAL(order1[1].begin()->first, numVariables + 1);
+      OPENGM_TEST_EQUAL(order1[1].begin()->second, 0);
+      OPENGM_TEST_EQUAL(order1[1].getLogicalOperatorType(), LPFunctionTransformationType::IndicatorVariableType::And);
+      OPENGM_TEST_EQUAL(order2.size(), 1);
+      OPENGM_TEST_EQUAL(std::distance(order2[0].begin(), order2[0].end()), 1);
+      OPENGM_TEST_EQUAL(order2[0].begin()->first, numVariables);
+      OPENGM_TEST_EQUAL(order2[0].begin()->second, 0);
+      OPENGM_TEST_EQUAL(order2[0].getLogicalOperatorType(), LPFunctionTransformationType::IndicatorVariableType::And);
+      OPENGM_TEST_EQUAL(order3.size(), 1);
+      OPENGM_TEST_EQUAL(std::distance(order3[0].begin(), order3[0].end()), 1);
+      OPENGM_TEST_EQUAL(order3[0].begin()->first, numVariables);
+      OPENGM_TEST_EQUAL(order3[0].begin()->second, 0);
+      OPENGM_TEST_EQUAL(order3[0].getLogicalOperatorType(), LPFunctionTransformationType::IndicatorVariableType::And);
+      OPENGM_TEST_EQUAL(order4.size(), 0);
+   } catch(opengm::RuntimeError& error) {
+      catchGetSlackVariablesOrderError = true;
+   }
+   OPENGM_TEST_EQUAL(catchGetSlackVariablesOrderError, false);
+
+   bool catchGetSlackVariablesObjectiveCoefficientsError = false;
+   try {
+      LPFunctionTransformationType::SlackVariablesObjectiveCoefficientsContainerType slackVariablesObjectiveCoefficients1;
+      LPFunctionTransformationType::SlackVariablesObjectiveCoefficientsContainerType slackVariablesObjectiveCoefficients2;
+      LPFunctionTransformationType::SlackVariablesObjectiveCoefficientsContainerType slackVariablesObjectiveCoefficients3;
+      LPFunctionTransformationType::SlackVariablesObjectiveCoefficientsContainerType slackVariablesObjectiveCoefficients4;
+      LPFunctionTransformationType::getSlackVariablesObjectiveCoefficients(pottsFunction1, slackVariablesObjectiveCoefficients1);
+      LPFunctionTransformationType::getSlackVariablesObjectiveCoefficients(pottsFunction2, slackVariablesObjectiveCoefficients2);
+      LPFunctionTransformationType::getSlackVariablesObjectiveCoefficients(pottsFunction3, slackVariablesObjectiveCoefficients3);
+      LPFunctionTransformationType::getSlackVariablesObjectiveCoefficients(pottsFunction4, slackVariablesObjectiveCoefficients4);
+      OPENGM_TEST_EQUAL(slackVariablesObjectiveCoefficients1.size(), 2);
+      OPENGM_TEST_EQUAL(slackVariablesObjectiveCoefficients1[0], valueNotEqual);
+      OPENGM_TEST_EQUAL(slackVariablesObjectiveCoefficients1[1], valueEqual);
+      OPENGM_TEST_EQUAL(slackVariablesObjectiveCoefficients2.size(), 1);
+      OPENGM_TEST_EQUAL(slackVariablesObjectiveCoefficients2[0], valueNotEqual);
+      OPENGM_TEST_EQUAL(slackVariablesObjectiveCoefficients3.size(), 1);
+      OPENGM_TEST_EQUAL(slackVariablesObjectiveCoefficients3[0], valueEqual);
+      OPENGM_TEST_EQUAL(slackVariablesObjectiveCoefficients4.size(), 0);
+   } catch(opengm::RuntimeError& error) {
+      catchGetSlackVariablesObjectiveCoefficientsError = true;
+   }
+   OPENGM_TEST_EQUAL(catchGetSlackVariablesObjectiveCoefficientsError, false);
+
+   bool catchGetIndicatorVariablesError = false;
+   try {
+      LPFunctionTransformationType::IndicatorVariablesContainerType variables1;
+      LPFunctionTransformationType::IndicatorVariablesContainerType variables2;
+      LPFunctionTransformationType::IndicatorVariablesContainerType variables3;
+      LPFunctionTransformationType::IndicatorVariablesContainerType variables4;
+      LPFunctionTransformationType::getIndicatorVariables(pottsFunction1, variables1);
+      LPFunctionTransformationType::getIndicatorVariables(pottsFunction2, variables2);
+      LPFunctionTransformationType::getIndicatorVariables(pottsFunction3, variables3);
+      LPFunctionTransformationType::getIndicatorVariables(pottsFunction4, variables4);
+      OPENGM_TEST_EQUAL(variables1.size(), minNumLabels + 2);
+      OPENGM_TEST_EQUAL(variables2.size(), minNumLabels + 1);
+      OPENGM_TEST_EQUAL(variables3.size(), minNumLabels + 1);
+      OPENGM_TEST_EQUAL(variables4.size(), 0);
+
+      for(LabelType i = 0; i < minNumLabels; ++i) {
+         OPENGM_TEST_EQUAL(std::distance(variables1[i].begin(), variables1[i].end()), 2);
+         OPENGM_TEST_EQUAL(std::distance(variables2[i].begin(), variables2[i].end()), 2);
+         OPENGM_TEST_EQUAL(std::distance(variables3[i].begin(), variables3[i].end()), 2);
+
+         OPENGM_TEST_EQUAL(variables1[i].begin()->first, 0);
+         OPENGM_TEST_EQUAL(variables1[i].begin()->second, i);
+         OPENGM_TEST_EQUAL((variables1[i].begin() + 1)->first, 1);
+         OPENGM_TEST_EQUAL((variables1[i].begin() + 1)->second, i);
+         OPENGM_TEST_EQUAL(variables2[i].begin()->first, 0);
+         OPENGM_TEST_EQUAL(variables2[i].begin()->second, i);
+         OPENGM_TEST_EQUAL((variables2[i].begin() + 1)->first, 1);
+         OPENGM_TEST_EQUAL((variables2[i].begin() + 1)->second, i);
+         OPENGM_TEST_EQUAL(variables3[i].begin()->first, 0);
+         OPENGM_TEST_EQUAL(variables3[i].begin()->second, i);
+         OPENGM_TEST_EQUAL((variables3[i].begin() + 1)->first, 1);
+         OPENGM_TEST_EQUAL((variables3[i].begin() + 1)->second, i);
+
+         OPENGM_TEST_EQUAL(variables1[i].getLogicalOperatorType(), LPFunctionTransformationType::IndicatorVariableType::And);
+         OPENGM_TEST_EQUAL(variables2[i].getLogicalOperatorType(), LPFunctionTransformationType::IndicatorVariableType::And);
+         OPENGM_TEST_EQUAL(variables3[i].getLogicalOperatorType(), LPFunctionTransformationType::IndicatorVariableType::And);
+      }
+
+      OPENGM_TEST_EQUAL(std::distance(variables1[minNumLabels].begin(), variables1[minNumLabels].end()), 1);
+      OPENGM_TEST_EQUAL(variables1[minNumLabels].begin()->first, 2);
+      OPENGM_TEST_EQUAL(variables1[minNumLabels].begin()->second, 0);
+      OPENGM_TEST_EQUAL(variables1[minNumLabels].getLogicalOperatorType(), LPFunctionTransformationType::IndicatorVariableType::And);
+      OPENGM_TEST_EQUAL(std::distance(variables1[minNumLabels + 1].begin(), variables1[minNumLabels + 1].end()), 1);
+      OPENGM_TEST_EQUAL(variables1[minNumLabels + 1].begin()->first, 3);
+      OPENGM_TEST_EQUAL(variables1[minNumLabels + 1].begin()->second, 0);
+      OPENGM_TEST_EQUAL(variables1[minNumLabels + 1].getLogicalOperatorType(), LPFunctionTransformationType::IndicatorVariableType::And);
+
+      OPENGM_TEST_EQUAL(std::distance(variables2[minNumLabels].begin(), variables2[minNumLabels].end()), 1);
+      OPENGM_TEST_EQUAL(variables2[minNumLabels].begin()->first, 2);
+      OPENGM_TEST_EQUAL(variables2[minNumLabels].begin()->second, 0);
+      OPENGM_TEST_EQUAL(variables2[minNumLabels].getLogicalOperatorType(), LPFunctionTransformationType::IndicatorVariableType::And);
+
+      OPENGM_TEST_EQUAL(std::distance(variables3[minNumLabels].begin(), variables3[minNumLabels].end()), 1);
+      OPENGM_TEST_EQUAL(variables3[minNumLabels].begin()->first, 2);
+      OPENGM_TEST_EQUAL(variables3[minNumLabels].begin()->second, 0);
+      OPENGM_TEST_EQUAL(variables3[minNumLabels].getLogicalOperatorType(), LPFunctionTransformationType::IndicatorVariableType::And);
+   } catch(opengm::RuntimeError& error) {
+      catchGetIndicatorVariablesError = true;
+   }
+   OPENGM_TEST_EQUAL(catchGetIndicatorVariablesError, false);
+
+
+
+
+   bool catchGetLinearConstraintsError = false;
+   try {
+      LPFunctionTransformationType::LinearConstraintsContainerType constraints1;
+      LPFunctionTransformationType::LinearConstraintsContainerType constraints2;
+      LPFunctionTransformationType::LinearConstraintsContainerType constraints3;
+      LPFunctionTransformationType::LinearConstraintsContainerType constraints4;
+      LPFunctionTransformationType::getLinearConstraints(pottsFunction1, constraints1);
+      LPFunctionTransformationType::getLinearConstraints(pottsFunction2, constraints2);
+      LPFunctionTransformationType::getLinearConstraints(pottsFunction3, constraints3);
+      LPFunctionTransformationType::getLinearConstraints(pottsFunction4, constraints4);
+
+      OPENGM_TEST_EQUAL(constraints1.size(), 2);
+      OPENGM_TEST_EQUAL(constraints2.size(), 1);
+      OPENGM_TEST_EQUAL(constraints3.size(), 1);
+      OPENGM_TEST_EQUAL(constraints4.size(), 0);
+
+      OPENGM_TEST_EQUAL(constraints1[0].getBound(), 1.0);
+      OPENGM_TEST_EQUAL(constraints1[1].getBound(), 1.0);
+      OPENGM_TEST_EQUAL(constraints2[0].getBound(), 1.0);
+      OPENGM_TEST_EQUAL(constraints3[0].getBound(), 0.0);
+
+      OPENGM_TEST_EQUAL(constraints1[0].getConstraintOperator(), LPFunctionTransformationType::LinearConstraintType::LinearConstraintOperatorType::Equal);
+      OPENGM_TEST_EQUAL(constraints1[1].getConstraintOperator(), LPFunctionTransformationType::LinearConstraintType::LinearConstraintOperatorType::Equal);
+      OPENGM_TEST_EQUAL(constraints2[0].getConstraintOperator(), LPFunctionTransformationType::LinearConstraintType::LinearConstraintOperatorType::Equal);
+      OPENGM_TEST_EQUAL(constraints3[0].getConstraintOperator(), LPFunctionTransformationType::LinearConstraintType::LinearConstraintOperatorType::Equal)
+
+      OPENGM_TEST_EQUAL(static_cast<size_t>(std::distance(constraints1[0].coefficientsBegin(), constraints1[0].coefficientsEnd())), minNumLabels + 1);
+      OPENGM_TEST_EQUAL(static_cast<size_t>(std::distance(constraints1[1].coefficientsBegin(), constraints1[1].coefficientsEnd())), 2);
+      OPENGM_TEST_EQUAL(static_cast<size_t>(std::distance(constraints2[0].coefficientsBegin(), constraints2[0].coefficientsEnd())), minNumLabels + 1);
+      OPENGM_TEST_EQUAL(static_cast<size_t>(std::distance(constraints3[0].coefficientsBegin(), constraints3[0].coefficientsEnd())), minNumLabels + 1);
+
+      for(LabelType i = 0; i < minNumLabels; ++i) {
+         OPENGM_TEST_EQUAL(*(constraints1[0].coefficientsBegin() + i), 1.0);
+         OPENGM_TEST_EQUAL(*(constraints2[0].coefficientsBegin() + i), 1.0);
+         OPENGM_TEST_EQUAL(*(constraints3[0].coefficientsBegin() + i), 1.0);
+      }
+      OPENGM_TEST_EQUAL(*(constraints1[0].coefficientsBegin() + minNumLabels), 1.0);
+      OPENGM_TEST_EQUAL(*(constraints1[1].coefficientsBegin()), 1.0);
+      OPENGM_TEST_EQUAL(*(constraints1[1].coefficientsBegin() + 1), 1.0);
+      OPENGM_TEST_EQUAL(*(constraints2[0].coefficientsBegin() + minNumLabels), 1.0);
+      OPENGM_TEST_EQUAL(*(constraints3[0].coefficientsBegin() + minNumLabels), -1.0);
+
+      OPENGM_TEST_EQUAL(static_cast<size_t>(std::distance(constraints1[0].indicatorVariablesBegin(), constraints1[0].indicatorVariablesEnd())), minNumLabels + 1);
+      OPENGM_TEST_EQUAL(static_cast<size_t>(std::distance(constraints1[1].indicatorVariablesBegin(), constraints1[1].indicatorVariablesEnd())), 2);
+      OPENGM_TEST_EQUAL(static_cast<size_t>(std::distance(constraints2[0].indicatorVariablesBegin(), constraints2[0].indicatorVariablesEnd())), minNumLabels + 1);
+      OPENGM_TEST_EQUAL(static_cast<size_t>(std::distance(constraints3[0].indicatorVariablesBegin(), constraints3[0].indicatorVariablesEnd())), minNumLabels + 1);
+
+      for(LabelType i = 0; i < minNumLabels; ++i) {
+         OPENGM_TEST_EQUAL(std::distance((constraints1[0].indicatorVariablesBegin() + i)->begin(), (constraints1[0].indicatorVariablesBegin() + i)->end()), 2);
+         OPENGM_TEST_EQUAL(std::distance((constraints2[0].indicatorVariablesBegin() + i)->begin(), (constraints2[0].indicatorVariablesBegin() + i)->end()), 2);
+         OPENGM_TEST_EQUAL(std::distance((constraints3[0].indicatorVariablesBegin() + i)->begin(), (constraints3[0].indicatorVariablesBegin() + i)->end()), 2);
+
+         OPENGM_TEST_EQUAL((constraints1[0].indicatorVariablesBegin() + i)->begin()->first, 0);
+         OPENGM_TEST_EQUAL((constraints1[0].indicatorVariablesBegin() + i)->begin()->second, i);
+         OPENGM_TEST_EQUAL(((constraints1[0].indicatorVariablesBegin() + i)->begin() + 1)->first, 1);
+         OPENGM_TEST_EQUAL(((constraints1[0].indicatorVariablesBegin() + i)->begin() + 1)->second, i);
+         OPENGM_TEST_EQUAL((constraints2[0].indicatorVariablesBegin() + i)->begin()->first, 0);
+         OPENGM_TEST_EQUAL((constraints2[0].indicatorVariablesBegin() + i)->begin()->second, i);
+         OPENGM_TEST_EQUAL(((constraints2[0].indicatorVariablesBegin() + i)->begin() + 1)->first, 1);
+         OPENGM_TEST_EQUAL(((constraints2[0].indicatorVariablesBegin() + i)->begin() + 1)->second, i);
+         OPENGM_TEST_EQUAL((constraints3[0].indicatorVariablesBegin() + i)->begin()->first, 0);
+         OPENGM_TEST_EQUAL((constraints3[0].indicatorVariablesBegin() + i)->begin()->second, i);
+         OPENGM_TEST_EQUAL(((constraints3[0].indicatorVariablesBegin() + i)->begin() + 1)->first, 1);
+         OPENGM_TEST_EQUAL(((constraints3[0].indicatorVariablesBegin() + i)->begin() + 1)->second, i);
+
+         OPENGM_TEST_EQUAL((constraints1[0].indicatorVariablesBegin() + i)->getLogicalOperatorType(), LPFunctionTransformationType::IndicatorVariableType::And);
+         OPENGM_TEST_EQUAL((constraints2[0].indicatorVariablesBegin() + i)->getLogicalOperatorType(), LPFunctionTransformationType::IndicatorVariableType::And);
+         OPENGM_TEST_EQUAL((constraints3[0].indicatorVariablesBegin() + i)->getLogicalOperatorType(), LPFunctionTransformationType::IndicatorVariableType::And);
+      }
+
+      OPENGM_TEST_EQUAL(std::distance((constraints1[0].indicatorVariablesBegin() + minNumLabels)->begin(), (constraints1[0].indicatorVariablesBegin() + minNumLabels)->end()), 1);
+      OPENGM_TEST_EQUAL((constraints1[0].indicatorVariablesBegin() + minNumLabels)->begin()->first, 2);
+      OPENGM_TEST_EQUAL((constraints1[0].indicatorVariablesBegin() + minNumLabels)->begin()->second, 0);
+      OPENGM_TEST_EQUAL((constraints1[0].indicatorVariablesBegin() + minNumLabels)->getLogicalOperatorType(), LPFunctionTransformationType::IndicatorVariableType::And);
+      OPENGM_TEST_EQUAL(std::distance((constraints1[1].indicatorVariablesBegin())->begin(), (constraints1[1].indicatorVariablesBegin())->end()), 1);
+      OPENGM_TEST_EQUAL((constraints1[1].indicatorVariablesBegin())->begin()->first, 2);
+      OPENGM_TEST_EQUAL((constraints1[1].indicatorVariablesBegin())->begin()->second, 0);
+      OPENGM_TEST_EQUAL((constraints1[1].indicatorVariablesBegin())->getLogicalOperatorType(), LPFunctionTransformationType::IndicatorVariableType::And);
+      OPENGM_TEST_EQUAL(std::distance((constraints1[1].indicatorVariablesBegin() + 1)->begin(), (constraints1[1].indicatorVariablesBegin() + 1)->end()), 1);
+      OPENGM_TEST_EQUAL((constraints1[1].indicatorVariablesBegin() + 1)->begin()->first, 3);
+      OPENGM_TEST_EQUAL((constraints1[1].indicatorVariablesBegin() + 1)->begin()->second, 0);
+      OPENGM_TEST_EQUAL((constraints1[1].indicatorVariablesBegin() + 1)->getLogicalOperatorType(), LPFunctionTransformationType::IndicatorVariableType::And);
+
+      OPENGM_TEST_EQUAL(std::distance((constraints2[0].indicatorVariablesBegin() + minNumLabels)->begin(), (constraints2[0].indicatorVariablesBegin() + minNumLabels)->end()), 1);
+      OPENGM_TEST_EQUAL((constraints2[0].indicatorVariablesBegin() + minNumLabels)->begin()->first, 2);
+      OPENGM_TEST_EQUAL((constraints2[0].indicatorVariablesBegin() + minNumLabels)->begin()->second, 0);
+      OPENGM_TEST_EQUAL((constraints2[0].indicatorVariablesBegin() + minNumLabels)->getLogicalOperatorType(), LPFunctionTransformationType::IndicatorVariableType::And);
+
+      OPENGM_TEST_EQUAL(std::distance((constraints3[0].indicatorVariablesBegin() + minNumLabels)->begin(), (constraints3[0].indicatorVariablesBegin() + minNumLabels)->end()), 1);
+      OPENGM_TEST_EQUAL((constraints3[0].indicatorVariablesBegin() + minNumLabels)->begin()->first, 2);
+      OPENGM_TEST_EQUAL((constraints3[0].indicatorVariablesBegin() + minNumLabels)->begin()->second, 0);
+      OPENGM_TEST_EQUAL((constraints3[0].indicatorVariablesBegin() + minNumLabels)->getLogicalOperatorType(), LPFunctionTransformationType::IndicatorVariableType::And);
+   } catch(opengm::RuntimeError& error) {
+      catchGetLinearConstraintsError = true;
+   }
+   OPENGM_TEST_EQUAL(catchGetLinearConstraintsError, false);
 }
 
 void testSumConstraintFunction() {
